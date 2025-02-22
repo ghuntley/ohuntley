@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Runner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>Maze Runner</h1>
+        <div class="game-info">
+            <div class="stats">
+                <p>Time: <span id="timer">0</span> seconds</p>
+                <p>Current Score: <span id="currentScore">0</span></p>
+            </div>
+            <div class="high-scores">
+                <h2>High Scores</h2>
+                <ol id="highScoresList"></ol>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls">
+            <button id="restartButton">Restart Game</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
