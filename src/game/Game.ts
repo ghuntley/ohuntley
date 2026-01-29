@@ -9,7 +9,11 @@ import {
   MAZE_SIZES,
   ZOMBIE_COUNTS,
   SWORD_SPAWN_CHANCE,
+  TIME_LIMITS,
 } from '../utils/Constants';
+
+// UI
+import { UIManager } from '../ui/UIManager';
 
 // Entities
 import { Player } from '../entities/Player';
@@ -75,6 +79,18 @@ export class Game {
   // Debug
   private debugMode: boolean;
 
+  // UI Manager
+  private uiManager: UIManager;
+
+  // Level timer
+  private levelTimeRemaining: number;
+  private levelStartTime: number;
+  private totalTimeSurvived: number;
+
+  // Stats tracking
+  private zombiesKilledThisLevel: number;
+  private powerUpsCollectedThisLevel: number;
+
   constructor(renderer: THREE.WebGLRenderer) {
     this.renderer = renderer;
     this.clock = new THREE.Clock(false);
@@ -116,6 +132,24 @@ export class Game {
     this.combatSystem = new CombatSystem();
     this.followCamera = new FollowCamera(this.camera);
     this.powerUpEffects = new PowerUpEffectManager();
+
+    // Initialize timer and stats
+    this.levelTimeRemaining = 0;
+    this.levelStartTime = 0;
+    this.totalTimeSurvived = 0;
+    this.zombiesKilledThisLevel = 0;
+    this.powerUpsCollectedThisLevel = 0;
+
+    // Initialize UI manager
+    this.uiManager = new UIManager({
+      onPlay: () => this.startLevel(1),
+      onContinue: () => this.continueFromSave(),
+      onResume: () => this.gameState.transitionTo(GameStateType.PLAYING),
+      onRestart: () => this.startLevel(this.currentLevel),
+      onQuitToMenu: () => this.returnToMenu(),
+      onTryAgain: () => this.startLevel(1),
+      onNextLevel: () => this.startLevel(this.currentLevel + 1),
+    });
 
     // Set up lighting
     this.setupLighting();
@@ -306,13 +340,29 @@ export class Game {
     this.gameState.addListener((newState, previousState) => {
       console.log(`Game state changed: ${previousState} -> ${newState}`);
 
+      // Update UI based on state
+      this.uiManager.onStateChange(newState, previousState);
+
       switch (newState) {
         case GameStateType.PLAYING:
           this.clock.start();
           break;
         case GameStateType.PAUSED:
+          break;
         case GameStateType.GAME_OVER:
+          this.uiManager.showGameOver({
+            level: this.currentLevel,
+            totalTimeSurvived: this.totalTimeSurvived,
+            zombiesKilled: this.zombiesKilledThisLevel,
+          });
+          break;
         case GameStateType.LEVEL_COMPLETE:
+          this.uiManager.showLevelComplete({
+            level: this.currentLevel,
+            timeRemaining: this.levelTimeRemaining,
+            zombiesKilled: this.zombiesKilledThisLevel,
+            powerUpsCollected: this.powerUpsCollectedThisLevel,
+          });
           break;
         case GameStateType.MENU:
           this.clock.stop();
@@ -405,6 +455,8 @@ export class Game {
     if (result.hit) {
       result.hitZombies.forEach((zombie) => {
         zombie.die();
+        this.zombiesKilledThisLevel++;
+        this.uiManager.addZombieKill();
         console.log(`Zombie ${zombie.getId()} killed!`);
       });
     }
@@ -434,7 +486,7 @@ export class Game {
     this.mazeRenderer.build(this.mazeGenerator);
 
     // Initialize collision system with maze
-    this.collisionSystem.initializeFromMaze(this.mazeGenerator);
+    this.collisionSystem.setMaze(this.mazeGenerator);
 
     // Clear existing entities
     this.clearEntities();
@@ -460,11 +512,56 @@ export class Game {
     // Reset power-up effects
     this.powerUpEffects.reset();
 
+    // Reset level timer and stats
+    this.levelTimeRemaining = this.getTimeLimitForLevel(level);
+    this.levelStartTime = performance.now();
+    this.zombiesKilledThisLevel = 0;
+    this.powerUpsCollectedThisLevel = 0;
+    this.uiManager.resetStats();
+
     // Position camera
     this.followCamera.snapToTarget(playerStartPos);
 
     // Start the game
     this.gameState.transitionTo(GameStateType.PLAYING);
+  }
+
+  /**
+   * Get time limit for level
+   */
+  private getTimeLimitForLevel(level: number): number {
+    if (level <= 3) return TIME_LIMITS.EASY;
+    if (level <= 6) return TIME_LIMITS.MEDIUM;
+    if (level <= 9) return TIME_LIMITS.HARD;
+    // Endless mode - decrease time gradually
+    const endlessReduction = (level - 10) * 5;
+    return Math.max(TIME_LIMITS.MIN, TIME_LIMITS.HARD - endlessReduction);
+  }
+
+  /**
+   * Return to main menu
+   */
+  private returnToMenu(): void {
+    this.gameState.forceState(GameStateType.MENU);
+    this.clearEntities();
+    this.mazeRenderer.clear();
+  }
+
+  /**
+   * Continue from saved progress
+   */
+  private continueFromSave(): void {
+    try {
+      const saveData = localStorage.getItem('meerkat-maze-runner-save');
+      if (saveData) {
+        const data = JSON.parse(saveData);
+        this.startLevel(data.level || 1);
+      } else {
+        this.startLevel(1);
+      }
+    } catch {
+      this.startLevel(1);
+    }
   }
 
   /**
@@ -747,6 +844,20 @@ export class Game {
   private update(deltaTime: number): void {
     if (!this.mazeGenerator) return;
 
+    // Update timer
+    this.levelTimeRemaining -= deltaTime;
+    this.totalTimeSurvived += deltaTime;
+    this.uiManager.setTotalTimeSurvived(this.totalTimeSurvived);
+
+    // Check for time expiration
+    if (this.levelTimeRemaining <= 0) {
+      this.levelTimeRemaining = 0;
+      this.player.die();
+      this.gameState.transitionTo(GameStateType.GAME_OVER);
+      console.log('Game Over - Time ran out!');
+      return;
+    }
+
     // Get input
     const moveInput = this.inputManager.getMovementDirection();
     const sprintInput = this.inputManager.isActionActive(InputAction.SPRINT);
@@ -765,30 +876,17 @@ export class Game {
     );
 
     // Handle player wall collisions
-    const playerPos = this.player.getPosition();
-    const collisionResult = this.collisionSystem.resolvePlayerWallCollision(
-      playerPos.x,
-      playerPos.z,
-      this.player.getCollisionRadius()
-    );
+    const collisionResult = this.collisionSystem.checkPlayerWallCollision(this.player);
     if (collisionResult.collided) {
       this.player.setPosition({
-        x: collisionResult.newX,
-        y: playerPos.y,
-        z: collisionResult.newZ,
+        x: collisionResult.correctedPosition.x,
+        y: this.player.getPosition().y,
+        z: collisionResult.correctedPosition.z,
       });
     }
 
     // Check for exit
-    const exit = this.mazeGenerator.getExit();
-    if (
-      this.collisionSystem.checkPlayerAtExit(
-        this.player.getPosition().x,
-        this.player.getPosition().z,
-        exit.x,
-        exit.y
-      )
-    ) {
+    if (this.collisionSystem.checkPlayerAtExit(this.player)) {
       this.gameState.transitionTo(GameStateType.LEVEL_COMPLETE);
       console.log(`Level ${this.currentLevel} complete!`);
       return;
@@ -822,6 +920,8 @@ export class Game {
         ) {
           powerUp.collect();
           this.powerUpEffects.applyEffect(powerUp.getType());
+          this.powerUpsCollectedThisLevel++;
+          this.uiManager.addPowerUpCollected();
           console.log(`Power-up collected: ${powerUp.getType()}`);
           // Hide power-up mesh
           const mesh = this.powerUpMeshes.get(powerUp.getId());
@@ -877,6 +977,20 @@ export class Game {
 
     // Update camera
     this.followCamera.update(deltaTime, this.player.getPosition());
+
+    // Update HUD
+    this.uiManager.updateHUD({
+      level: this.currentLevel,
+      timeRemaining: this.levelTimeRemaining,
+      sprintPercent: this.player.getSprintGaugePercent(),
+      hasSword: this.player.getHasSword(),
+      hasShield: this.powerUpEffects.getHasShield(),
+      activeEffects: this.powerUpEffects.getActiveEffects().map((effect) => ({
+        type: effect.type,
+        remainingTime: effect.remainingTime,
+        duration: effect.duration,
+      })),
+    });
 
     // Update entity meshes
     this.updateMeshes();

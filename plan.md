@@ -26,12 +26,12 @@
 - [x] Combat System (sword attacks)
 - [x] Power-ups (speed boost, shield, etc.)
 
-### Phase 4: UI & Polish
-- [ ] HUD (timer, sprint gauge, level indicator)
-- [ ] Main Menu
-- [ ] Pause Menu
-- [ ] Game Over / Victory screens
-- [ ] Leaderboard with LocalStorage persistence
+### Phase 4: UI & Polish ✅
+- [x] HUD (timer, sprint gauge, level indicator)
+- [x] Main Menu
+- [x] Pause Menu
+- [x] Game Over / Victory screens
+- [x] Leaderboard with LocalStorage persistence
 
 ### Phase 5: Audio & Effects
 - [ ] Audio Manager
@@ -116,3 +116,12 @@
 - Timed effects with duration tracking
 - Visual feedback (player transparency, zombie color changes)
 - Callback system for game-wide effects (freeze all zombies)
+
+### UI System
+- **HUD**: Timer with warning states (yellow/red), sprint gauge, level indicator, sword/shield indicators, active power-ups display
+- **Main Menu**: Title screen with Play, Continue, Leaderboard, How to Play buttons
+- **Pause Menu**: Resume, Restart Level, Quit to Menu buttons
+- **Game Over Screen**: Stats display (level, time, kills), high score entry
+- **Level Complete Screen**: Stats, star rating, confetti celebration
+- **Leaderboard**: Top 10 scores with LocalStorage persistence, score calculation: (Level × 1000) + Survival Time
+- **UIManager**: Coordinates all UI components with game state transitions
