@@ -2,11 +2,9 @@ import * as THREE from 'three';
 import {
   MOBILE_SHADOW_MAP_SIZE,
   DESKTOP_SHADOW_MAP_SIZE,
-  MOBILE_FOG_NEAR,
-  MOBILE_FOG_FAR,
-  DESKTOP_FOG_NEAR,
-  DESKTOP_FOG_FAR,
   MOBILE_PIXEL_RATIO_CAP,
+  FOG_VISIBILITY_RADIUS,
+  CELL_SIZE,
 } from '../utils/Constants';
 
 /**
@@ -33,14 +31,22 @@ export interface PerformanceSettings {
 }
 
 /**
+ * Calculate fog of war settings based on visibility radius
+ * Spec: 3-4 cells visibility radius = 12-16 world units
+ */
+const FOG_VISIBILITY_WORLD = FOG_VISIBILITY_RADIUS * CELL_SIZE;
+const FOG_FADE_DISTANCE = CELL_SIZE * 2;
+
+/**
  * Performance tier configurations
+ * Note: Fog settings now use fog of war visibility radius from spec
  */
 const TIER_SETTINGS: Record<PerformanceTier, PerformanceSettings> = {
   [PerformanceTier.LOW]: {
     shadowMapSize: 512,
     shadowsEnabled: false,
-    fogNear: MOBILE_FOG_NEAR,
-    fogFar: MOBILE_FOG_FAR,
+    fogNear: FOG_VISIBILITY_WORLD - FOG_FADE_DISTANCE,
+    fogFar: FOG_VISIBILITY_WORLD + FOG_FADE_DISTANCE,
     pixelRatio: 1,
     particleMultiplier: 0.3,
     antialias: false,
@@ -49,8 +55,8 @@ const TIER_SETTINGS: Record<PerformanceTier, PerformanceSettings> = {
   [PerformanceTier.MEDIUM]: {
     shadowMapSize: MOBILE_SHADOW_MAP_SIZE,
     shadowsEnabled: true,
-    fogNear: MOBILE_FOG_NEAR,
-    fogFar: MOBILE_FOG_FAR,
+    fogNear: FOG_VISIBILITY_WORLD - FOG_FADE_DISTANCE,
+    fogFar: FOG_VISIBILITY_WORLD + FOG_FADE_DISTANCE,
     pixelRatio: Math.min(window.devicePixelRatio, MOBILE_PIXEL_RATIO_CAP),
     particleMultiplier: 0.5,
     antialias: false,
@@ -59,8 +65,8 @@ const TIER_SETTINGS: Record<PerformanceTier, PerformanceSettings> = {
   [PerformanceTier.HIGH]: {
     shadowMapSize: DESKTOP_SHADOW_MAP_SIZE,
     shadowsEnabled: true,
-    fogNear: DESKTOP_FOG_NEAR,
-    fogFar: DESKTOP_FOG_FAR,
+    fogNear: FOG_VISIBILITY_WORLD - FOG_FADE_DISTANCE,
+    fogFar: FOG_VISIBILITY_WORLD + FOG_FADE_DISTANCE,
     pixelRatio: window.devicePixelRatio,
     particleMultiplier: 1.0,
     antialias: true,
@@ -213,14 +219,19 @@ export class PerformanceManager {
 
   /**
    * Apply performance settings to scene
+   * Uses fog of war color (dark blue-gray) for limited visibility effect
    */
   applyToScene(scene: THREE.Scene): void {
+    const fogColor = 0x1a1a2e; // Dark blue-gray for fog of war effect
     if (scene.fog instanceof THREE.Fog) {
       scene.fog.near = this.settings.fogNear;
       scene.fog.far = this.settings.fogFar;
+      scene.fog.color.setHex(fogColor);
     } else {
-      scene.fog = new THREE.Fog(0x87ceeb, this.settings.fogNear, this.settings.fogFar);
+      scene.fog = new THREE.Fog(fogColor, this.settings.fogNear, this.settings.fogFar);
     }
+    // Match background to fog color for seamless darkness at edges
+    scene.background = new THREE.Color(fogColor);
   }
 
   /**

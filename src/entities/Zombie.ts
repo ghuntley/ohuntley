@@ -11,6 +11,7 @@ import {
   CELL_SIZE,
 } from '../utils/Constants';
 import { Pathfinding } from '../systems/Pathfinding';
+import { LineOfSight } from '../systems/LineOfSight';
 import { MazeGenerator, Point } from '../maze/MazeGenerator';
 import { Position } from './Player';
 
@@ -73,6 +74,7 @@ export class Zombie {
   // Reference to maze for grid conversion
   private maze: MazeGenerator | null;
   private pathfinding: Pathfinding | null;
+  private lineOfSight: LineOfSight | null;
 
   constructor(config: ZombieConfig = {}) {
     this.id = Zombie.nextId++;
@@ -107,6 +109,7 @@ export class Zombie {
     // References
     this.maze = null;
     this.pathfinding = null;
+    this.lineOfSight = null;
   }
 
   /**
@@ -115,6 +118,7 @@ export class Zombie {
   initialize(maze: MazeGenerator, pathfinding: Pathfinding): void {
     this.maze = maze;
     this.pathfinding = pathfinding;
+    this.lineOfSight = new LineOfSight(maze);
   }
 
   /**
@@ -181,34 +185,31 @@ export class Zombie {
 
   /**
    * Check if zombie can see the player (within detection radius and line of sight)
+   * Uses true raycasting through the maze grid to check for wall obstructions
    */
   private canSeePlayer(playerPosition: Position): boolean {
     const dx = playerPosition.x - this.position.x;
     const dz = playerPosition.z - this.position.z;
     const distance = Math.sqrt(dx * dx + dz * dz);
 
-    // Check detection radius
+    // Check detection radius first (quick rejection)
     if (distance > this.detectionRadius) {
       return false;
     }
 
-    // Check line of sight (simplified - checks if path exists and is short enough)
-    if (this.maze && this.pathfinding) {
-      const zombieGrid = this.worldToGrid(this.position.x, this.position.z);
-      const playerGrid = this.worldToGrid(playerPosition.x, playerPosition.z);
-
-      // Simple line of sight check - if straight path distance is close to actual distance,
-      // there's likely a clear line of sight
-      const pathLength = this.pathfinding.getPathLength(zombieGrid, playerGrid);
-
-      // If path is reasonably direct (not more than 50% longer than straight line)
-      const straightLineGridDist = Math.abs(zombieGrid.x - playerGrid.x) + Math.abs(zombieGrid.y - playerGrid.y);
-      if (pathLength >= 0 && pathLength <= straightLineGridDist * 1.5 + 2) {
-        return true;
-      }
+    // Check true line of sight using raycasting through the maze grid
+    if (this.lineOfSight) {
+      return this.lineOfSight.hasLineOfSight(
+        this.position.x,
+        this.position.z,
+        playerPosition.x,
+        playerPosition.z
+      );
     }
 
-    return distance <= this.detectionRadius / 2; // Fallback: very close detection
+    // Fallback if line of sight system not initialized (shouldn't happen)
+    // Use very close detection only
+    return distance <= this.detectionRadius / 3;
   }
 
   /**

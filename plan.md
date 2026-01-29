@@ -61,6 +61,15 @@
 - [x] Minimap shows player, zombies, exit, power-ups, sword
 - [x] Keyboard shortcuts: backtick (`) for debug mode, M for minimap
 
+### Phase 8: Visibility Systems ✅
+- [x] 3D Fog of War system (limited visibility radius in 3D view)
+- [x] True line-of-sight for zombie detection (raycasting through maze grid)
+- [x] FogOfWarSystem class with configurable visibility radius and fade
+- [x] LineOfSight class with grid-based raycasting using DDA algorithm
+- [x] Visibility radius matches spec (3-4 cells = 12-16 world units)
+- [x] Dark fog color for dramatic effect at visibility edges
+- [x] Zombie detection now blocked by maze walls (true LOS)
+
 ## Current Implementation Notes
 
 ### Maze Generator
@@ -253,3 +262,18 @@
 - Power-ups and sword positions shown when in explored area
 - Automatic exploration radius around player (3 cells)
 - Legend showing marker meanings
+
+### 3D Fog of War System
+- Distance-based fog limits visibility to 3-4 cells (FOG_VISIBILITY_RADIUS)
+- Dark fog color (0x1a1a2e) for dramatic effect
+- Seamless darkness at visibility edges (background matches fog)
+- Performance-aware: same settings across all tiers
+- Applied via Three.js Fog with near/far based on visibility radius
+
+### Line of Sight System
+- True raycasting for zombie detection (walls block vision)
+- Uses Digital Differential Analyzer (DDA) algorithm
+- Grid-based traversal checking wall transitions
+- Replaces old pathfinding heuristic with accurate LOS
+- getVisibleCells() method for future fog of war enhancements
+- Zombies can only detect player when no walls block the path

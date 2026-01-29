@@ -14,6 +14,7 @@ import {
   ZOMBIE_CHASE_SPEED,
   ZOMBIE_DETECTION_RADIUS,
   ZOMBIE_DIFFICULTY,
+  FOG_VISIBILITY_RADIUS,
 } from '../utils/Constants';
 
 // UI
@@ -235,11 +236,18 @@ export class Game {
   private createScene(): THREE.Scene {
     const scene = new THREE.Scene();
 
-    // Set fog for atmosphere
-    scene.fog = new THREE.Fog(0x87ceeb, 30, 100);
+    // Set fog of war for limited visibility (spec: 3-4 cells = 12-16 world units)
+    // Using a dark fog color for dramatic effect and to hide distant objects
+    const fogVisibilityWorld = FOG_VISIBILITY_RADIUS * CELL_SIZE;
+    const fogFadeDistance = CELL_SIZE * 2;
+    scene.fog = new THREE.Fog(
+      0x1a1a2e, // Dark blue-gray for fog of war effect
+      fogVisibilityWorld - fogFadeDistance,
+      fogVisibilityWorld + fogFadeDistance
+    );
 
-    // Set background color (sky blue)
-    scene.background = new THREE.Color(0x87ceeb);
+    // Set background color to match fog (creates seamless darkness at edges)
+    scene.background = new THREE.Color(0x1a1a2e);
 
     return scene;
   }
