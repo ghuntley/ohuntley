@@ -7,6 +7,7 @@ export interface MainMenuCallbacks {
   onPlay?: () => void;
   onContinue?: () => void;
   onLeaderboard?: () => void;
+  onSettings?: () => void;
   onHowToPlay?: () => void;
 }
 
@@ -186,6 +187,15 @@ export class MainMenu {
           background: linear-gradient(180deg, #d094ff 0%, #b865ff 100%);
         }
 
+        .settings-btn {
+          background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+          color: #1e293b;
+        }
+
+        .settings-btn:hover {
+          background: linear-gradient(180deg, #a4b3c8 0%, #7484ab 100%);
+        }
+
         .main-menu-footer {
           position: absolute;
           bottom: 20px;
@@ -240,6 +250,7 @@ export class MainMenu {
         <button class="main-menu-btn play-btn">Play</button>
         <button class="main-menu-btn continue-btn" style="display: ${this.hasProgress ? 'block' : 'none'}">Continue</button>
         <button class="main-menu-btn leaderboard-btn">Leaderboard</button>
+        <button class="main-menu-btn settings-btn">Settings</button>
         <button class="main-menu-btn howtoplay-btn">How to Play</button>
       </div>
 
@@ -258,6 +269,7 @@ export class MainMenu {
     const playBtn = this.menuElement.querySelector('.play-btn');
     const continueBtn = this.menuElement.querySelector('.continue-btn');
     const leaderboardBtn = this.menuElement.querySelector('.leaderboard-btn');
+    const settingsBtn = this.menuElement.querySelector('.settings-btn');
     const howToPlayBtn = this.menuElement.querySelector('.howtoplay-btn');
 
     playBtn?.addEventListener('click', () => {
@@ -270,6 +282,10 @@ export class MainMenu {
 
     leaderboardBtn?.addEventListener('click', () => {
       this.callbacks.onLeaderboard?.();
+    });
+
+    settingsBtn?.addEventListener('click', () => {
+      this.callbacks.onSettings?.();
     });
 
     howToPlayBtn?.addEventListener('click', () => {

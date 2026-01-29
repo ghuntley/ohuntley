@@ -43,7 +43,7 @@
 - [x] Touch controls (virtual joystick, action buttons)
 - [x] Mobile optimizations (PerformanceManager with auto-tier detection)
 - [x] Performance tuning (shadow quality, fog distance, particle scaling)
-- [ ] Bug fixes and balancing
+- [x] Bug fixes and balancing
 
 ### Bonus: Spectator Meerkats ✅
 - [x] SpectatorMeerkat entity (head tracking, idle animation)
@@ -184,3 +184,39 @@
 - Configurable intensity and duration
 - Decay over time for natural feel
 - Applied after camera positioning in game loop
+
+### Zombie Difficulty Scaling
+- Level-based difficulty multipliers for patrol speed, chase speed, and detection radius
+- Levels 1-3 (Easy): 80% patrol/85% chase speed, 70% detection radius
+- Levels 4-6 (Medium): Normal values
+- Levels 7-9 (Hard): 115% patrol/120% chase speed, 130% detection radius
+- Levels 10+ (Endless): 125% patrol/130% chase speed, 140% detection radius
+
+### Timer Warning Sounds
+- Warning ticking sound for last 10 seconds (1 tick/sec)
+- Critical ticking sound for last 5 seconds (2 ticks/sec, higher pitch)
+- Rate-limited to prevent sound spam
+
+### Spectator Meerkat Sounds
+- Occasional chirps when curious (low frequency)
+- Alarm calls when danger is near (higher frequency)
+- Sound triggers based on max alert level across all spectators
+
+### Settings Menu
+- Audio controls: Master, Music, and SFX volume sliders
+- Mute all toggle
+- Settings persist to localStorage
+- Accessible from main menu
+
+### How to Play Screen
+- Proper overlay screen (replaced alert())
+- Visual control guide for keyboard and mobile
+- Power-up descriptions with icons
+- Tips and goal explanation
+- Spectator meerkat warning system explained
+
+### Save/Continue System
+- Progress saved to localStorage on level completion
+- Saves next level number and total time survived
+- Continue button appears when save exists
+- Progress cleared on game over or new game start

@@ -20,6 +20,12 @@ export type { LevelCompleteData, LevelCompleteCallbacks } from './LevelCompleteS
 export { Leaderboard } from './Leaderboard';
 export type { LeaderboardEntry, LeaderboardData } from './Leaderboard';
 
+export { SettingsMenu } from './SettingsMenu';
+export type { SettingsMenuCallbacks } from './SettingsMenu';
+
+export { HowToPlayScreen } from './HowToPlayScreen';
+export type { HowToPlayCallbacks } from './HowToPlayScreen';
+
 export { UIManager } from './UIManager';
 export type { UIManagerCallbacks } from './UIManager';
 

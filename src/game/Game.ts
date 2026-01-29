@@ -10,6 +10,10 @@ import {
   ZOMBIE_COUNTS,
   SWORD_SPAWN_CHANCE,
   TIME_LIMITS,
+  ZOMBIE_PATROL_SPEED,
+  ZOMBIE_CHASE_SPEED,
+  ZOMBIE_DETECTION_RADIUS,
+  ZOMBIE_DIFFICULTY,
 } from '../utils/Constants';
 
 // UI
@@ -21,13 +25,18 @@ import { Zombie, ZombieState } from '../entities/Zombie';
 import { Sword } from '../entities/Sword';
 import { PowerUp, PowerUpType, PowerUpEffectManager } from '../entities/PowerUp';
 import { SpectatorMeerkatManager } from '../entities/SpectatorMeerkatManager';
+import { AlertLevel } from '../entities/SpectatorMeerkat';
 
 // Systems
 import { InputManager, InputAction } from '../systems/InputManager';
 import { CollisionSystem } from '../systems/CollisionSystem';
 import { CombatSystem } from '../systems/CombatSystem';
 import { Pathfinding } from '../systems/Pathfinding';
-import { AudioManager, MusicTheme, SoundEffect } from '../systems/AudioManager';
+import {
+  AudioManager,
+  MusicTheme,
+  SoundEffect,
+} from '../systems/AudioManager';
 import { ParticleSystem, ParticleEffectType } from '../systems/ParticleSystem';
 import { PerformanceManager } from '../systems/PerformanceManager';
 
@@ -163,12 +172,12 @@ export class Game {
 
     // Initialize UI manager
     this.uiManager = new UIManager({
-      onPlay: () => this.startLevel(1),
+      onPlay: () => this.startLevel(1, true), // New game
       onContinue: () => this.continueFromSave(),
       onResume: () => this.gameState.transitionTo(GameStateType.PLAYING),
       onRestart: () => this.startLevel(this.currentLevel),
       onQuitToMenu: () => this.returnToMenu(),
-      onTryAgain: () => this.startLevel(1),
+      onTryAgain: () => this.startLevel(1, true), // New game after game over
       onNextLevel: () => this.startLevel(this.currentLevel + 1),
     });
 
@@ -396,6 +405,7 @@ export class Game {
         case GameStateType.GAME_OVER:
           this.audioManager.stopMusic();
           this.audioManager.play(SoundEffect.GAME_OVER);
+          this.clearProgress(); // Clear save on game over
           this.uiManager.showGameOver({
             level: this.currentLevel,
             totalTimeSurvived: this.totalTimeSurvived,
@@ -405,6 +415,7 @@ export class Game {
         case GameStateType.LEVEL_COMPLETE:
           this.audioManager.stopMusic();
           this.audioManager.play(SoundEffect.LEVEL_COMPLETE);
+          this.saveProgress(); // Save progress on level complete
           this.uiManager.showLevelComplete({
             level: this.currentLevel,
             timeRemaining: this.levelTimeRemaining,
@@ -435,9 +446,9 @@ export class Game {
         case 'Enter':
           // Start game from menu or restart
           if (this.gameState.is(GameStateType.MENU)) {
-            this.startLevel(1);
+            this.startLevel(1, true); // New game
           } else if (this.gameState.is(GameStateType.GAME_OVER)) {
-            this.startLevel(1);
+            this.startLevel(1, true); // New game after game over
           } else if (this.gameState.is(GameStateType.LEVEL_COMPLETE)) {
             this.startLevel(this.currentLevel + 1);
           }
@@ -549,8 +560,15 @@ export class Game {
 
   /**
    * Start a new level
+   * @param level Level number to start
+   * @param isNewGame If true, clears saved progress and resets total time
    */
-  startLevel(level: number): void {
+  startLevel(level: number, isNewGame: boolean = false): void {
+    // Clear save and reset stats when starting a fresh game
+    if (level === 1 && isNewGame) {
+      this.clearProgress();
+      this.totalTimeSurvived = 0;
+    }
     this.currentLevel = level;
 
     // Determine maze size based on level
@@ -643,12 +661,42 @@ export class Game {
       const saveData = localStorage.getItem('meerkat-maze-runner-save');
       if (saveData) {
         const data = JSON.parse(saveData);
+        this.totalTimeSurvived = data.totalTimeSurvived || 0;
         this.startLevel(data.level || 1);
       } else {
         this.startLevel(1);
       }
     } catch {
       this.startLevel(1);
+    }
+  }
+
+  /**
+   * Save current progress to localStorage
+   */
+  private saveProgress(): void {
+    try {
+      const saveData = {
+        level: this.currentLevel + 1, // Save next level to continue from
+        totalTimeSurvived: this.totalTimeSurvived,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem('meerkat-maze-runner-save', JSON.stringify(saveData));
+      console.log(`Progress saved: Level ${this.currentLevel + 1}`);
+    } catch (error) {
+      console.warn('Failed to save progress:', error);
+    }
+  }
+
+  /**
+   * Clear saved progress
+   */
+  private clearProgress(): void {
+    try {
+      localStorage.removeItem('meerkat-maze-runner-save');
+      console.log('Saved progress cleared');
+    } catch (error) {
+      console.warn('Failed to clear progress:', error);
     }
   }
 
@@ -672,6 +720,32 @@ export class Game {
   }
 
   /**
+   * Get zombie difficulty config for level
+   */
+  private getZombieDifficultyForLevel(level: number): {
+    patrolSpeed: number;
+    chaseSpeed: number;
+    detectionRadius: number;
+  } {
+    let difficulty;
+    if (level <= 3) {
+      difficulty = ZOMBIE_DIFFICULTY.EASY;
+    } else if (level <= 6) {
+      difficulty = ZOMBIE_DIFFICULTY.MEDIUM;
+    } else if (level <= 9) {
+      difficulty = ZOMBIE_DIFFICULTY.HARD;
+    } else {
+      difficulty = ZOMBIE_DIFFICULTY.ENDLESS;
+    }
+
+    return {
+      patrolSpeed: ZOMBIE_PATROL_SPEED * difficulty.patrolSpeedMultiplier,
+      chaseSpeed: ZOMBIE_CHASE_SPEED * difficulty.chaseSpeedMultiplier,
+      detectionRadius: ZOMBIE_DETECTION_RADIUS * difficulty.detectionRadiusMultiplier,
+    };
+  }
+
+  /**
    * Spawn zombies for level
    */
   private spawnZombies(level: number): void {
@@ -684,11 +758,14 @@ export class Game {
     const { width, height } = this.mazeGenerator.getDimensions();
     const start = this.mazeGenerator.getStart();
 
+    // Get level-based zombie difficulty
+    const zombieConfig = this.getZombieDifficultyForLevel(level);
+
     // Minimum distance from player start (in grid cells)
     const minDistanceFromStart = 3;
 
     for (let i = 0; i < zombieCount; i++) {
-      const zombie = new Zombie();
+      const zombie = new Zombie(zombieConfig);
       zombie.initialize(this.mazeGenerator, this.pathfinding);
 
       // Find a valid spawn position away from player
@@ -943,6 +1020,15 @@ export class Game {
     this.totalTimeSurvived += deltaTime;
     this.uiManager.setTotalTimeSurvived(this.totalTimeSurvived);
 
+    // Play timer warning sounds
+    if (this.levelTimeRemaining <= 5 && this.levelTimeRemaining > 0) {
+      // Critical: last 5 seconds - faster ticking
+      this.audioManager.play(SoundEffect.TIMER_CRITICAL);
+    } else if (this.levelTimeRemaining <= 10 && this.levelTimeRemaining > 5) {
+      // Warning: last 10 seconds - regular ticking
+      this.audioManager.play(SoundEffect.TIMER_WARNING);
+    }
+
     // Check for time expiration
     if (this.levelTimeRemaining <= 0) {
       this.levelTimeRemaining = 0;
@@ -1109,6 +1195,16 @@ export class Game {
       .filter((z) => z.isAlive())
       .map((z) => z.getPosition());
     this.spectatorManager.update(deltaTime, this.player.getPosition(), zombiePositions);
+
+    // Play meerkat sounds based on alert level
+    const meerkatAlertLevel = this.spectatorManager.getMaxAlertLevel();
+    if (meerkatAlertLevel >= AlertLevel.ALARMED) {
+      // High alert - warning alarm sounds
+      this.audioManager.play(SoundEffect.MEERKAT_ALARM);
+    } else if (meerkatAlertLevel >= AlertLevel.CURIOUS && Math.random() < 0.02) {
+      // Occasional chirps when curious
+      this.audioManager.play(SoundEffect.MEERKAT_CHIRP);
+    }
 
     // Update camera
     this.followCamera.update(deltaTime, this.player.getPosition());

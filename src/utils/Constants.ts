@@ -54,6 +54,30 @@ export const ZOMBIE_CHASE_SPEED = 7;
 /** Zombie detection radius in world units */
 export const ZOMBIE_DETECTION_RADIUS = 8;
 
+/** Zombie difficulty scaling by level tier */
+export const ZOMBIE_DIFFICULTY = {
+  EASY: {
+    patrolSpeedMultiplier: 0.8,
+    chaseSpeedMultiplier: 0.85,
+    detectionRadiusMultiplier: 0.7,
+  },
+  MEDIUM: {
+    patrolSpeedMultiplier: 1.0,
+    chaseSpeedMultiplier: 1.0,
+    detectionRadiusMultiplier: 1.0,
+  },
+  HARD: {
+    patrolSpeedMultiplier: 1.15,
+    chaseSpeedMultiplier: 1.2,
+    detectionRadiusMultiplier: 1.3,
+  },
+  ENDLESS: {
+    patrolSpeedMultiplier: 1.25,
+    chaseSpeedMultiplier: 1.3,
+    detectionRadiusMultiplier: 1.4,
+  },
+} as const;
+
 // ============================================
 // Camera Constants
 // ============================================

@@ -440,4 +440,18 @@ export class SpectatorMeerkatManager {
   getAlertedCount(): number {
     return this.spectators.filter((s) => s.getIsAlerted()).length;
   }
+
+  /**
+   * Get the maximum alert level among all spectators
+   */
+  getMaxAlertLevel(): AlertLevel {
+    let maxLevel = AlertLevel.CALM;
+    for (const spectator of this.spectators) {
+      const level = spectator.getAlertLevel();
+      if (level > maxLevel) {
+        maxLevel = level;
+      }
+    }
+    return maxLevel;
+  }
 }

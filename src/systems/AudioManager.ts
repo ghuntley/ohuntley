@@ -28,6 +28,10 @@ export enum SoundEffect {
   POWERUP_PICKUP = 'POWERUP_PICKUP',
   LEVEL_COMPLETE = 'LEVEL_COMPLETE',
   GAME_OVER = 'GAME_OVER',
+  TIMER_WARNING = 'TIMER_WARNING',
+  TIMER_CRITICAL = 'TIMER_CRITICAL',
+  MEERKAT_CHIRP = 'MEERKAT_CHIRP',
+  MEERKAT_ALARM = 'MEERKAT_ALARM',
 }
 
 /** Volume types for control */
@@ -250,6 +254,95 @@ class SyntheticSoundGenerator {
   }
 
   /**
+   * Create timer warning sound (slow ticking)
+   */
+  createTimerWarning(destination: AudioNode): AudioBufferSourceNode {
+    const duration = 0.1;
+    const buffer = this.context.createBuffer(1, this.context.sampleRate * duration, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < data.length; i++) {
+      const t = i / this.context.sampleRate;
+      const envelope = Math.exp(-t * 30);
+      // Tick sound - short metallic click
+      data[i] = (Math.sin(2 * Math.PI * 1000 * t) * 0.5 +
+                 Math.sin(2 * Math.PI * 2000 * t) * 0.3) * envelope * 0.3;
+    }
+
+    const source = this.context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(destination);
+    return source;
+  }
+
+  /**
+   * Create timer critical sound (fast ticking with higher pitch)
+   */
+  createTimerCritical(destination: AudioNode): AudioBufferSourceNode {
+    const duration = 0.08;
+    const buffer = this.context.createBuffer(1, this.context.sampleRate * duration, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < data.length; i++) {
+      const t = i / this.context.sampleRate;
+      const envelope = Math.exp(-t * 40);
+      // Higher pitch urgent tick
+      data[i] = (Math.sin(2 * Math.PI * 1500 * t) * 0.5 +
+                 Math.sin(2 * Math.PI * 3000 * t) * 0.3) * envelope * 0.4;
+    }
+
+    const source = this.context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(destination);
+    return source;
+  }
+
+  /**
+   * Create meerkat chirp sound (soft ambient chirp)
+   */
+  createMeerkatChirp(destination: AudioNode): AudioBufferSourceNode {
+    const duration = 0.15;
+    const buffer = this.context.createBuffer(1, this.context.sampleRate * duration, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < data.length; i++) {
+      const t = i / this.context.sampleRate;
+      const envelope = Math.sin(Math.PI * t / duration);
+      // Soft chirp with frequency modulation
+      const frequency = 800 + Math.sin(t * 60) * 200;
+      data[i] = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.15;
+    }
+
+    const source = this.context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(destination);
+    return source;
+  }
+
+  /**
+   * Create meerkat alarm sound (sharp warning squeak)
+   */
+  createMeerkatAlarm(destination: AudioNode): AudioBufferSourceNode {
+    const duration = 0.25;
+    const buffer = this.context.createBuffer(1, this.context.sampleRate * duration, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < data.length; i++) {
+      const t = i / this.context.sampleRate;
+      const envelope = Math.exp(-t * 8);
+      // Sharp alarm squeak with rapid frequency changes
+      const frequency = 1200 + Math.sin(t * 100) * 400;
+      data[i] = (Math.sin(2 * Math.PI * frequency * t) * 0.6 +
+                 Math.sin(2 * Math.PI * frequency * 1.5 * t) * 0.3) * envelope * 0.25;
+    }
+
+    const source = this.context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(destination);
+    return source;
+  }
+
+  /**
    * Create background music (procedural ambient music)
    */
   createMusicLoop(theme: MusicTheme): { oscillators: OscillatorNode[], gainNodes: GainNode[] } {
@@ -344,6 +437,18 @@ export class AudioManager {
   // Sound timing for frequently used sounds
   private footstepLastPlayTime: number = 0;
   private readonly FOOTSTEP_MIN_INTERVAL = 0.25; // seconds between footsteps
+
+  // Timer warning sound timing
+  private timerWarningLastPlayTime: number = 0;
+  private timerCriticalLastPlayTime: number = 0;
+  private readonly TIMER_WARNING_INTERVAL = 1.0; // 1 tick per second
+  private readonly TIMER_CRITICAL_INTERVAL = 0.5; // 2 ticks per second
+
+  // Meerkat sound timing
+  private meerkatChirpLastPlayTime: number = 0;
+  private meerkatAlarmLastPlayTime: number = 0;
+  private readonly MEERKAT_CHIRP_INTERVAL = 3.0; // occasional chirps
+  private readonly MEERKAT_ALARM_INTERVAL = 0.8; // more frequent when alarmed
 
   // Initialization state
   private initialized: boolean = false;
@@ -469,13 +574,34 @@ export class AudioManager {
       return;
     }
 
-    // Enforce minimum interval for footsteps
+    const now = this.context.currentTime;
+
+    // Enforce minimum intervals for repeated sounds
     if (sound === SoundEffect.FOOTSTEP) {
-      const now = this.context.currentTime;
       if (now - this.footstepLastPlayTime < this.FOOTSTEP_MIN_INTERVAL) {
         return;
       }
       this.footstepLastPlayTime = now;
+    } else if (sound === SoundEffect.TIMER_WARNING) {
+      if (now - this.timerWarningLastPlayTime < this.TIMER_WARNING_INTERVAL) {
+        return;
+      }
+      this.timerWarningLastPlayTime = now;
+    } else if (sound === SoundEffect.TIMER_CRITICAL) {
+      if (now - this.timerCriticalLastPlayTime < this.TIMER_CRITICAL_INTERVAL) {
+        return;
+      }
+      this.timerCriticalLastPlayTime = now;
+    } else if (sound === SoundEffect.MEERKAT_CHIRP) {
+      if (now - this.meerkatChirpLastPlayTime < this.MEERKAT_CHIRP_INTERVAL) {
+        return;
+      }
+      this.meerkatChirpLastPlayTime = now;
+    } else if (sound === SoundEffect.MEERKAT_ALARM) {
+      if (now - this.meerkatAlarmLastPlayTime < this.MEERKAT_ALARM_INTERVAL) {
+        return;
+      }
+      this.meerkatAlarmLastPlayTime = now;
     }
 
     let source: AudioBufferSourceNode;
@@ -504,6 +630,18 @@ export class AudioManager {
         break;
       case SoundEffect.GAME_OVER:
         source = this.soundGenerator.createGameOver(this.sfxGain);
+        break;
+      case SoundEffect.TIMER_WARNING:
+        source = this.soundGenerator.createTimerWarning(this.sfxGain);
+        break;
+      case SoundEffect.TIMER_CRITICAL:
+        source = this.soundGenerator.createTimerCritical(this.sfxGain);
+        break;
+      case SoundEffect.MEERKAT_CHIRP:
+        source = this.soundGenerator.createMeerkatChirp(this.sfxGain);
+        break;
+      case SoundEffect.MEERKAT_ALARM:
+        source = this.soundGenerator.createMeerkatAlarm(this.sfxGain);
         break;
       default:
         return;

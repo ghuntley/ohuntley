@@ -10,6 +10,8 @@ import { PauseMenu, PauseMenuCallbacks } from './PauseMenu';
 import { GameOverScreen, GameOverData, GameOverCallbacks } from './GameOverScreen';
 import { LevelCompleteScreen, LevelCompleteData, LevelCompleteCallbacks } from './LevelCompleteScreen';
 import { Leaderboard } from './Leaderboard';
+import { SettingsMenu } from './SettingsMenu';
+import { HowToPlayScreen } from './HowToPlayScreen';
 
 export interface UIManagerCallbacks {
   // Main menu actions
@@ -38,6 +40,8 @@ export class UIManager {
   private gameOverScreen: GameOverScreen;
   private levelCompleteScreen: LevelCompleteScreen;
   private leaderboard: Leaderboard;
+  private settingsMenu: SettingsMenu;
+  private howToPlayScreen: HowToPlayScreen;
 
   private callbacks: UIManagerCallbacks;
 
@@ -66,6 +70,18 @@ export class UIManager {
       this.createLevelCompleteCallbacks()
     );
 
+    this.settingsMenu = new SettingsMenu({
+      onBack: () => {
+        this.mainMenu.show();
+      },
+    });
+
+    this.howToPlayScreen = new HowToPlayScreen({
+      onBack: () => {
+        this.mainMenu.show();
+      },
+    });
+
     // Set leaderboard back callback
     this.leaderboard.onBack = () => {
       this.mainMenu.show();
@@ -86,24 +102,13 @@ export class UIManager {
         this.mainMenu.hide();
         this.leaderboard.show();
       },
+      onSettings: () => {
+        this.mainMenu.hide();
+        this.settingsMenu.show();
+      },
       onHowToPlay: () => {
-        // For now, just show an alert - could be a proper tutorial screen
-        alert(
-          'Meerkat Maze Runner - How to Play\n\n' +
-            '🎯 Goal: Reach the exit before time runs out!\n\n' +
-            '🎮 Controls:\n' +
-            '• WASD or Arrow Keys - Move\n' +
-            '• Shift - Sprint\n' +
-            '• Space - Attack (when sword collected)\n' +
-            '• Escape - Pause\n\n' +
-            '⚡ Power-ups:\n' +
-            '• Speed Boost - Move faster\n' +
-            '• Shield - Survive one zombie hit\n' +
-            '• Invisibility - Zombies cant see you\n' +
-            '• Freeze - Stop all zombies\n' +
-            '• Sprint Refill - Instant sprint restore\n\n' +
-            '💀 Watch out for zombies!'
-        );
+        this.mainMenu.hide();
+        this.howToPlayScreen.show();
       },
     };
   }
@@ -308,5 +313,7 @@ export class UIManager {
     this.pauseMenu.destroy();
     this.gameOverScreen.destroy();
     this.levelCompleteScreen.destroy();
+    this.settingsMenu.destroy();
+    this.howToPlayScreen.destroy();
   }
 }
