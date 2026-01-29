@@ -111,6 +111,7 @@ export class Game {
 
     // Initialize systems
     this.inputManager = InputManager.getInstance();
+    this.inputManager.initialize();
     this.collisionSystem = new CollisionSystem();
     this.combatSystem = new CombatSystem();
     this.followCamera = new FollowCamera(this.camera);
@@ -350,8 +351,8 @@ export class Game {
    * Set up input action handlers
    */
   private setupInputHandlers(): void {
-    this.inputManager.addListener(InputAction.ATTACK, (pressed) => {
-      if (pressed && this.gameState.is(GameStateType.PLAYING)) {
+    this.inputManager.addActionCallback((action, pressed) => {
+      if (action === InputAction.ATTACK && pressed && this.gameState.is(GameStateType.PLAYING)) {
         this.handleAttack();
       }
     });
@@ -747,7 +748,7 @@ export class Game {
     if (!this.mazeGenerator) return;
 
     // Get input
-    const moveInput = this.inputManager.getMoveInput();
+    const moveInput = this.inputManager.getMovementDirection();
     const sprintInput = this.inputManager.isActionActive(InputAction.SPRINT);
 
     // Apply speed multiplier from power-ups
