@@ -77,6 +77,13 @@
 - [x] Camera wall collision avoidance (raycasting to prevent clipping through hedges)
 - [x] Smooth camera transition when obstruction clears
 
+### Phase 10: Enhanced Visuals & Mobile UX ✅
+- [x] HapticManager for mobile vibration feedback (attack, hit, collect, death, level complete)
+- [x] Improved MeerkatModel using Three.js primitives (detailed body, head, ears, tail, arms, legs)
+- [x] ZombieModel with glowing eyes (red emissive eyes with point lights visible in fog)
+- [x] Zombie visual state system (normal, chasing, frozen) with distinct appearances
+- [x] Player and zombie models positioned correctly at ground level
+
 ## Current Implementation Notes
 
 ### Maze Generator
@@ -291,3 +298,24 @@
 - Replaces old pathfinding heuristic with accurate LOS
 - getVisibleCells() method for future fog of war enhancements
 - Zombies can only detect player when no walls block the path
+
+### Haptic Feedback System
+- HapticManager singleton using Vibration API
+- Predefined patterns: LIGHT, MEDIUM, HEAVY, DOUBLE, SUCCESS, WARNING, ERROR
+- Game event methods: onAttack(), onHitZombie(), onPowerUpCollect(), onShieldBreak(), onDeath(), onLevelComplete()
+- Graceful fallback when API not supported
+- User can enable/disable haptic feedback
+
+### Meerkat Character Model
+- MeerkatModel class creates stylized 3D meerkat using Three.js primitives
+- Includes: body, belly, head with snout, eyes with highlights, eye patches, ears, arms, paws, legs, feet, tail
+- Configurable colors: body, belly, eye, nose
+- Methods for visual effects: setEmissive(), setOpacity(), setBodyColor()
+- Factory functions: createPlayerMeerkatModel(), createZombieMeerkatModel()
+
+### Zombie Character Model
+- ZombieModel class creates undead meerkat with glowing eyes
+- Glowing eyes: emissive sphere with point light for fog visibility
+- Visual states: NORMAL, CHASING (intense red glow), FROZEN (ice blue)
+- Body has undead aesthetic: sickly green, claws, hunched posture
+- Point lights attached to eyes illuminate nearby area through fog

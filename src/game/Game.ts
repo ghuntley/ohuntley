@@ -27,6 +27,8 @@ import { Sword } from '../entities/Sword';
 import { PowerUp, PowerUpType, PowerUpEffectManager } from '../entities/PowerUp';
 import { SpectatorMeerkatManager } from '../entities/SpectatorMeerkatManager';
 import { AlertLevel } from '../entities/SpectatorMeerkat';
+import { MeerkatModel, createPlayerMeerkatModel } from '../entities/MeerkatModel';
+import { ZombieModel, ZombieVisualState } from '../entities/ZombieModel';
 
 // Systems
 import { InputManager, InputAction } from '../systems/InputManager';
@@ -40,6 +42,7 @@ import {
 } from '../systems/AudioManager';
 import { ParticleSystem, ParticleEffectType } from '../systems/ParticleSystem';
 import { PerformanceManager } from '../systems/PerformanceManager';
+import { HapticManager } from '../systems/HapticManager';
 
 // Maze
 import { MazeGenerator, Point } from '../maze/MazeGenerator';
@@ -84,8 +87,10 @@ export class Game {
   private spectatorManager: SpectatorMeerkatManager;
 
   // 3D Meshes for entities
-  private playerMesh: THREE.Mesh | null;
-  private zombieMeshes: Map<number, THREE.Mesh>;
+  private playerMesh: THREE.Group | null;
+  private playerModel: MeerkatModel | null;
+  private zombieMeshes: Map<number, THREE.Group>;
+  private zombieModels: Map<number, ZombieModel>;
   private swordMesh: THREE.Mesh | null;
   private powerUpMeshes: Map<number, THREE.Mesh>;
 
@@ -99,6 +104,7 @@ export class Game {
   private particleSystem: ParticleSystem;
   private performanceManager: PerformanceManager;
   private screenShake: ScreenShake;
+  private hapticManager: HapticManager;
 
   // Debug & Minimap
   private debugMode: boolean;
@@ -150,7 +156,9 @@ export class Game {
 
     // Initialize 3D mesh maps
     this.playerMesh = null;
+    this.playerModel = null;
     this.zombieMeshes = new Map();
+    this.zombieModels = new Map();
     this.swordMesh = null;
     this.powerUpMeshes = new Map();
 
@@ -171,6 +179,7 @@ export class Game {
       isMobile: this.performanceManager.getIsMobile(),
     });
     this.screenShake = new ScreenShake(this.camera);
+    this.hapticManager = HapticManager.getInstance();
 
     // Initialize debug overlay and minimap
     this.debugOverlay = new DebugOverlay();
@@ -306,36 +315,31 @@ export class Game {
   }
 
   /**
-   * Create the player mesh
+   * Create the player mesh using the detailed meerkat model
    */
   private createPlayerMesh(): void {
-    const playerGeometry = new THREE.CapsuleGeometry(0.4, 1, 4, 8);
-    const playerMaterial = new THREE.MeshStandardMaterial({
-      color: 0xd2691e, // Brown for meerkat
-      roughness: 0.7,
+    this.playerModel = createPlayerMeerkatModel({
+      scale: 0.8, // Slightly smaller for gameplay
+      castShadow: true,
     });
-    this.playerMesh = new THREE.Mesh(playerGeometry, playerMaterial);
-    this.playerMesh.castShadow = true;
+    this.playerMesh = this.playerModel.getGroup();
     this.playerMesh.name = 'player';
     this.scene.add(this.playerMesh);
   }
 
   /**
-   * Create a zombie mesh
+   * Create a zombie mesh with glowing eyes
    */
-  private createZombieMesh(zombie: Zombie): THREE.Mesh {
-    const zombieGeometry = new THREE.CapsuleGeometry(0.4, 1, 4, 8);
-    const zombieMaterial = new THREE.MeshStandardMaterial({
-      color: 0x556b2f, // Dark olive green (zombie meerkat)
-      roughness: 0.8,
-      emissive: 0x220000,
-      emissiveIntensity: 0.3,
+  private createZombieMesh(zombie: Zombie): THREE.Group {
+    const zombieModel = new ZombieModel({
+      scale: 0.8,
+      castShadow: true,
     });
-    const mesh = new THREE.Mesh(zombieGeometry, zombieMaterial);
-    mesh.castShadow = true;
+    const mesh = zombieModel.getGroup();
     mesh.name = `zombie_${zombie.getId()}`;
     this.scene.add(mesh);
     this.zombieMeshes.set(zombie.getId(), mesh);
+    this.zombieModels.set(zombie.getId(), zombieModel);
     return mesh;
   }
 
@@ -426,6 +430,7 @@ export class Game {
         case GameStateType.GAME_OVER:
           this.audioManager.stopMusic();
           this.audioManager.play(SoundEffect.GAME_OVER);
+          this.hapticManager.onDeath();
           this.clearProgress(); // Clear save on game over
           this.uiManager.showGameOver({
             level: this.currentLevel,
@@ -436,6 +441,7 @@ export class Game {
         case GameStateType.LEVEL_COMPLETE:
           this.audioManager.stopMusic();
           this.audioManager.play(SoundEffect.LEVEL_COMPLETE);
+          this.hapticManager.onLevelComplete();
           this.saveProgress(); // Save progress on level complete
           this.uiManager.showLevelComplete({
             level: this.currentLevel,
@@ -536,6 +542,7 @@ export class Game {
     // Play sword swing sound when player has sword
     if (this.player.getHasSword()) {
       this.audioManager.play(SoundEffect.SWORD_SWING);
+      this.hapticManager.onAttack();
 
       // Emit sword trail effect
       const playerPos = this.player.getPosition();
@@ -557,6 +564,7 @@ export class Game {
     if (result.hit) {
       // Play sword hit sound
       this.audioManager.play(SoundEffect.SWORD_HIT);
+      this.hapticManager.onHitZombie();
 
       // Screen shake for combat feedback
       this.screenShake.shake(0.2, 0.1);
@@ -945,14 +953,17 @@ export class Game {
     // Clear zombies
     this.zombies.forEach((zombie) => {
       const mesh = this.zombieMeshes.get(zombie.getId());
+      const model = this.zombieModels.get(zombie.getId());
       if (mesh) {
         this.scene.remove(mesh);
-        mesh.geometry.dispose();
-        (mesh.material as THREE.Material).dispose();
+      }
+      if (model) {
+        model.dispose();
       }
     });
     this.zombies = [];
     this.zombieMeshes.clear();
+    this.zombieModels.clear();
 
     // Clear sword
     if (this.swordMesh) {
@@ -1132,6 +1143,7 @@ export class Game {
         this.player.pickupSword();
         // Play pickup sound
         this.audioManager.play(SoundEffect.POWERUP_PICKUP);
+        this.hapticManager.onSwordCollect();
 
         // Emit collection particles (silver/white for sword)
         this.particleSystem.emit(
@@ -1165,6 +1177,7 @@ export class Game {
           this.uiManager.addPowerUpCollected();
           // Play pickup sound
           this.audioManager.play(SoundEffect.POWERUP_PICKUP);
+          this.hapticManager.onPowerUpCollect();
 
           // Emit power-up collection particles
           this.particleSystem.emit(
@@ -1207,6 +1220,7 @@ export class Game {
             );
             // Screen shake for impact
             this.screenShake.shake(0.4, 0.2);
+            this.hapticManager.onShieldBreak();
 
             // Push zombie back slightly
             const zombiePos = zombie.getPosition();
@@ -1351,55 +1365,49 @@ export class Game {
    */
   private updateMeshes(): void {
     // Update player mesh
-    if (this.playerMesh) {
+    if (this.playerMesh && this.playerModel) {
       const pos = this.player.getPosition();
-      this.playerMesh.position.set(pos.x, 1, pos.z);
+      // Position at ground level (model is built from y=0)
+      this.playerMesh.position.set(pos.x, 0, pos.z);
       this.playerMesh.rotation.y = this.player.getRotation();
 
       // Visual feedback for invisibility
-      const material = this.playerMesh.material as THREE.MeshStandardMaterial;
       if (this.powerUpEffects.getIsInvisible()) {
-        material.transparent = true;
-        material.opacity = 0.4;
+        this.playerModel.setOpacity(0.4);
       } else {
-        material.transparent = false;
-        material.opacity = 1;
+        this.playerModel.setOpacity(1);
       }
 
       // Visual feedback for shield
       if (this.powerUpEffects.getHasShield()) {
-        material.emissive = new THREE.Color(0x00ffff);
-        material.emissiveIntensity = 0.3;
+        this.playerModel.setEmissive(0x00ffff, 0.3);
       } else {
-        material.emissive = new THREE.Color(0x000000);
-        material.emissiveIntensity = 0;
+        this.playerModel.setEmissive(0x000000, 0);
       }
     }
 
     // Update zombie meshes
     this.zombies.forEach((zombie) => {
       const mesh = this.zombieMeshes.get(zombie.getId());
-      if (mesh) {
+      const model = this.zombieModels.get(zombie.getId());
+      if (mesh && model) {
         if (!zombie.isAlive()) {
           mesh.visible = false;
           return;
         }
 
         const pos = zombie.getPosition();
-        mesh.position.set(pos.x, 1, pos.z);
+        // Position at ground level (model is built from y=0)
+        mesh.position.set(pos.x, 0, pos.z);
         mesh.rotation.y = zombie.getRotation();
 
-        // Visual feedback for frozen state
-        const material = mesh.material as THREE.MeshStandardMaterial;
+        // Visual feedback based on zombie state
         if (zombie.isFrozen()) {
-          material.color.setHex(0x88ccff); // Ice blue
-          material.emissive.setHex(0x0044aa);
+          model.setVisualState(ZombieVisualState.FROZEN);
         } else if (zombie.getState() === ZombieState.CHASE) {
-          material.color.setHex(0x660000); // Aggressive red tint
-          material.emissive.setHex(0x440000);
+          model.setVisualState(ZombieVisualState.CHASING);
         } else {
-          material.color.setHex(0x556b2f); // Normal color
-          material.emissive.setHex(0x220000);
+          model.setVisualState(ZombieVisualState.NORMAL);
         }
       }
     });
