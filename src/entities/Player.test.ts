@@ -152,6 +152,17 @@ describe('Player', () => {
 
       expect(player.getSprintGaugePercent()).toBeCloseTo(0.5);
     });
+
+    it('should refill sprint gauge to full capacity', () => {
+      // Deplete some sprint
+      player.update(2, { x: 0, y: 1 }, true);
+      expect(player.getSprintGauge()).toBeLessThan(SPRINT_GAUGE_CAPACITY);
+
+      // Refill sprint
+      player.refillSprint();
+      expect(player.getSprintGauge()).toBe(SPRINT_GAUGE_CAPACITY);
+      expect(player.getSprintGaugePercent()).toBe(1);
+    });
   });
 
   describe('state', () => {

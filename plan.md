@@ -70,6 +70,13 @@
 - [x] Dark fog color for dramatic effect at visibility edges
 - [x] Zombie detection now blocked by maze walls (true LOS)
 
+### Phase 9: Polish & Spec Compliance ✅
+- [x] Sprint refill power-up now fully functional (was placeholder)
+- [x] Mobile control customization (joystick position left/right, button size small/medium/large)
+- [x] Touch control settings persist to localStorage
+- [x] Camera wall collision avoidance (raycasting to prevent clipping through hedges)
+- [x] Smooth camera transition when obstruction clears
+
 ## Current Implementation Notes
 
 ### Maze Generator
@@ -112,6 +119,9 @@
 - Configurable distance, height, angle, and follow speed
 - Snap-to-target for instant positioning
 - Frustum-based visibility checks
+- Wall collision avoidance (raycasting from player to camera)
+- Smooth distance adjustment when obstructed by walls
+- Configurable collision padding and minimum distance
 
 ### A* Pathfinding System
 - Grid-based A* implementation for maze navigation
@@ -140,6 +150,7 @@
 
 ### Power-up System
 - Five power-up types: Speed Boost, Sprint Refill, Invisibility, Shield, Freeze
+- Sprint Refill: instantly refills player sprint gauge to full capacity
 - Timed effects with duration tracking
 - Visual feedback (player transparency, zombie color changes)
 - Callback system for game-wide effects (freeze all zombies)
@@ -173,13 +184,15 @@
 - Uses InstancedMesh for performance when many meerkats
 
 ### Touch Controls
-- Virtual joystick: bottom-left, 100px radius, drag to move
-- Sprint button: bottom-right, press and hold
+- Virtual joystick: configurable position (left or right side), drag to move
+- Sprint button: opposite side from joystick, press and hold
 - Attack button: above sprint, tap to attack
 - Pause button: top-right corner
 - Auto-shows on touch devices, hidden on desktop
 - Dead zone handling (10% radius) prevents accidental movement
 - Visual feedback on button presses
+- Customizable button size: small, medium, or large
+- Settings persist to localStorage
 
 ### Particle System
 - GPU-accelerated using Three.js Points with BufferGeometry
@@ -225,6 +238,7 @@
 ### Settings Menu
 - Audio controls: Master, Music, and SFX volume sliders
 - Mute all toggle
+- Touch control settings: joystick position (left/right), button size (small/medium/large)
 - Settings persist to localStorage
 - Accessible from main menu
 

@@ -20,10 +20,13 @@ export interface FollowCameraConfig {
   heightOffset?: number;
   fov?: number;
   followSpeed?: number;
+  collisionEnabled?: boolean;
+  collisionPadding?: number;
+  minDistance?: number;
 }
 
 /**
- * Third-person follow camera with smooth tracking
+ * Third-person follow camera with smooth tracking and wall collision avoidance
  */
 export class FollowCamera {
   private camera: THREE.PerspectiveCamera;
@@ -46,6 +49,14 @@ export class FollowCamera {
 
   // Player rotation tracking (for camera to follow behind player)
   private playerRotation: number;
+
+  // Collision avoidance
+  private collisionEnabled: boolean;
+  private collisionPadding: number;
+  private minDistance: number;
+  private raycaster: THREE.Raycaster;
+  private collisionObjects: THREE.Object3D[] = [];
+  private currentDistance: number; // Actual distance used (may be reduced due to collision)
 
   /**
    * Create a FollowCamera
@@ -77,6 +88,13 @@ export class FollowCamera {
     this.heightOffset = config.heightOffset ?? CAMERA_HEIGHT_OFFSET;
     this.followSpeed = config.followSpeed ?? CAMERA_FOLLOW_SPEED;
 
+    // Initialize collision parameters
+    this.collisionEnabled = config.collisionEnabled ?? true;
+    this.collisionPadding = config.collisionPadding ?? 0.5;
+    this.minDistance = config.minDistance ?? 3;
+    this.raycaster = new THREE.Raycaster();
+    this.currentDistance = this.distance;
+
     // Initialize vectors
     this.targetPosition = new THREE.Vector3();
     this.lookAtTarget = new THREE.Vector3();
@@ -104,8 +122,22 @@ export class FollowCamera {
       this.playerRotation = playerRotation;
     }
 
-    // Calculate target position
-    this.updateTargetPosition();
+    // Calculate ideal target position at full distance
+    this.updateTargetPosition(this.distance);
+
+    // Check for collisions and adjust distance if needed
+    if (this.collisionEnabled && this.collisionObjects.length > 0) {
+      const adjustedDistance = this.checkCollision();
+      if (adjustedDistance < this.currentDistance) {
+        // Quickly move closer when obstructed
+        this.currentDistance = adjustedDistance;
+      } else {
+        // Smoothly return to full distance when unobstructed
+        this.currentDistance = this.currentDistance + (this.distance - this.currentDistance) * 0.05;
+      }
+      // Recalculate target with adjusted distance
+      this.updateTargetPosition(this.currentDistance);
+    }
 
     // Smooth interpolation to target position
     const lerpFactor = 1 - Math.exp(-this.followSpeed * deltaTime);
@@ -120,11 +152,14 @@ export class FollowCamera {
   /**
    * Calculate target camera position based on player position and rotation
    * Camera is positioned behind and above player, rotating with player facing
+   * @param dist Distance from player (may be adjusted for collision)
    */
-  private updateTargetPosition(): void {
+  private updateTargetPosition(dist?: number): void {
+    const useDistance = dist ?? this.distance;
+
     // Calculate vertical and horizontal components based on angle
-    const horizontalDistance = this.distance * Math.cos(this.angle);
-    const verticalDistance = this.distance * Math.sin(this.angle);
+    const horizontalDistance = useDistance * Math.cos(this.angle);
+    const verticalDistance = useDistance * Math.sin(this.angle);
 
     // Camera orbits around player based on player's rotation
     // Player rotation uses atan2(dirX, dirZ):
@@ -144,6 +179,88 @@ export class FollowCamera {
   }
 
   /**
+   * Check for collisions between player and camera target position
+   * @returns Adjusted distance that avoids collision, or full distance if clear
+   */
+  private checkCollision(): number {
+    // Calculate direction from player to target camera position
+    const direction = new THREE.Vector3()
+      .subVectors(this.targetPosition, this.playerPosition)
+      .normalize();
+
+    // Cast ray from player towards camera target
+    const playerHead = this.playerPosition.clone();
+    playerHead.y += 1.5; // Start from approximate head height
+
+    this.raycaster.set(playerHead, direction);
+    this.raycaster.far = this.distance + this.collisionPadding;
+
+    const intersections = this.raycaster.intersectObjects(this.collisionObjects, true);
+
+    if (intersections.length > 0) {
+      // Found an obstruction - move camera closer
+      const hitDistance = intersections[0].distance - this.collisionPadding;
+      return Math.max(this.minDistance, hitDistance);
+    }
+
+    // No obstruction - use full distance
+    return this.distance;
+  }
+
+  /**
+   * Set objects that the camera should avoid clipping through
+   * @param objects Array of Three.js objects (typically maze walls)
+   */
+  setCollisionObjects(objects: THREE.Object3D[]): void {
+    this.collisionObjects = objects;
+  }
+
+  /**
+   * Add a single object to collision detection
+   * @param object Three.js object to add
+   */
+  addCollisionObject(object: THREE.Object3D): void {
+    if (!this.collisionObjects.includes(object)) {
+      this.collisionObjects.push(object);
+    }
+  }
+
+  /**
+   * Remove an object from collision detection
+   * @param object Three.js object to remove
+   */
+  removeCollisionObject(object: THREE.Object3D): void {
+    const index = this.collisionObjects.indexOf(object);
+    if (index !== -1) {
+      this.collisionObjects.splice(index, 1);
+    }
+  }
+
+  /**
+   * Clear all collision objects
+   */
+  clearCollisionObjects(): void {
+    this.collisionObjects = [];
+  }
+
+  /**
+   * Enable or disable collision avoidance
+   */
+  setCollisionEnabled(enabled: boolean): void {
+    this.collisionEnabled = enabled;
+    if (!enabled) {
+      this.currentDistance = this.distance;
+    }
+  }
+
+  /**
+   * Check if collision avoidance is enabled
+   */
+  isCollisionEnabled(): boolean {
+    return this.collisionEnabled;
+  }
+
+  /**
    * Immediately snap camera to target position (no lerp)
    * @param playerPosition Player's world position
    * @param playerRotation Player's Y rotation in radians (optional)
@@ -154,7 +271,16 @@ export class FollowCamera {
       this.playerRotation = playerRotation;
     }
     this.lookAtTarget.copy(this.playerPosition);
-    this.updateTargetPosition();
+
+    // Check for collision and adjust distance
+    this.updateTargetPosition(this.distance);
+    if (this.collisionEnabled && this.collisionObjects.length > 0) {
+      this.currentDistance = this.checkCollision();
+      this.updateTargetPosition(this.currentDistance);
+    } else {
+      this.currentDistance = this.distance;
+    }
+
     this.camera.position.copy(this.targetPosition);
     this.camera.lookAt(this.lookAtTarget);
   }
@@ -190,6 +316,7 @@ export class FollowCamera {
     }
     if (config.distance !== undefined) {
       this.distance = config.distance;
+      this.currentDistance = Math.min(this.currentDistance, this.distance);
     }
     if (config.heightOffset !== undefined) {
       this.heightOffset = config.heightOffset;
@@ -200,6 +327,15 @@ export class FollowCamera {
     if (config.fov !== undefined) {
       this.camera.fov = config.fov;
       this.camera.updateProjectionMatrix();
+    }
+    if (config.collisionEnabled !== undefined) {
+      this.setCollisionEnabled(config.collisionEnabled);
+    }
+    if (config.collisionPadding !== undefined) {
+      this.collisionPadding = config.collisionPadding;
+    }
+    if (config.minDistance !== undefined) {
+      this.minDistance = config.minDistance;
     }
   }
 
@@ -213,7 +349,17 @@ export class FollowCamera {
       heightOffset: this.heightOffset,
       followSpeed: this.followSpeed,
       fov: this.camera.fov,
+      collisionEnabled: this.collisionEnabled,
+      collisionPadding: this.collisionPadding,
+      minDistance: this.minDistance,
     };
+  }
+
+  /**
+   * Get current effective distance (may be reduced due to collision)
+   */
+  getCurrentDistance(): number {
+    return this.currentDistance;
   }
 
   /**

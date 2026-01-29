@@ -505,9 +505,7 @@ export class Game {
     });
 
     this.powerUpEffects.setOnRefillSprint(() => {
-      // Refill player sprint gauge - would need to add method to Player
-      // For now this is a placeholder
-      console.log('Sprint refilled!');
+      this.player.refillSprint();
     });
   }
 
@@ -613,6 +611,9 @@ export class Game {
 
     // Build maze renderer
     this.mazeRenderer.build(this.mazeGenerator);
+
+    // Set up camera collision with maze walls
+    this.camera.setCollisionObjects(this.mazeRenderer.getWallMeshes());
 
     // Initialize collision system with maze
     this.collisionSystem.setMaze(this.mazeGenerator);

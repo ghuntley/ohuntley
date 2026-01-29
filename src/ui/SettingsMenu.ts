@@ -4,9 +4,16 @@
  */
 
 import { AudioManager, VolumeType } from '../systems/AudioManager';
+import { JoystickPosition, TouchButtonSize } from '../utils/Constants';
 
 export interface SettingsMenuCallbacks {
   onBack?: () => void;
+  onTouchSettingsChanged?: (joystickPosition: JoystickPosition, buttonSize: TouchButtonSize) => void;
+}
+
+export interface TouchControlSettings {
+  joystickPosition: JoystickPosition;
+  buttonSize: TouchButtonSize;
 }
 
 /**
@@ -17,6 +24,10 @@ export class SettingsMenu {
   private menuElement: HTMLElement | null = null;
   private callbacks: SettingsMenuCallbacks;
   private audioManager: AudioManager;
+  private touchSettings: TouchControlSettings = {
+    joystickPosition: 'left',
+    buttonSize: 'medium',
+  };
 
   constructor(callbacks: SettingsMenuCallbacks = {}) {
     this.container = document.getElementById('game-container');
@@ -24,6 +35,13 @@ export class SettingsMenu {
     this.audioManager = AudioManager.getInstance();
     this.createMenu();
     this.loadSettings();
+  }
+
+  /**
+   * Get current touch control settings
+   */
+  getTouchSettings(): TouchControlSettings {
+    return { ...this.touchSettings };
   }
 
   /**
@@ -43,7 +61,15 @@ export class SettingsMenu {
         if (settings.masterVolume !== undefined) {
           this.audioManager.setVolume(VolumeType.MASTER, settings.masterVolume);
         }
+        // Load touch control settings
+        if (settings.joystickPosition === 'left' || settings.joystickPosition === 'right') {
+          this.touchSettings.joystickPosition = settings.joystickPosition;
+        }
+        if (settings.buttonSize === 'small' || settings.buttonSize === 'medium' || settings.buttonSize === 'large') {
+          this.touchSettings.buttonSize = settings.buttonSize;
+        }
         this.updateSliderValues();
+        this.updateTouchControlValues();
       }
     } catch {
       // Ignore errors
@@ -59,10 +85,29 @@ export class SettingsMenu {
         musicVolume: this.audioManager.getVolume(VolumeType.MUSIC),
         sfxVolume: this.audioManager.getVolume(VolumeType.SFX),
         masterVolume: this.audioManager.getVolume(VolumeType.MASTER),
+        joystickPosition: this.touchSettings.joystickPosition,
+        buttonSize: this.touchSettings.buttonSize,
       };
       localStorage.setItem('meerkat-maze-settings', JSON.stringify(settings));
     } catch {
       // Ignore errors
+    }
+  }
+
+  /**
+   * Update touch control UI values from current settings
+   */
+  private updateTouchControlValues(): void {
+    if (!this.menuElement) return;
+
+    const joystickSelect = this.menuElement.querySelector('#joystick-position') as HTMLSelectElement;
+    const buttonSizeSelect = this.menuElement.querySelector('#button-size') as HTMLSelectElement;
+
+    if (joystickSelect) {
+      joystickSelect.value = this.touchSettings.joystickPosition;
+    }
+    if (buttonSizeSelect) {
+      buttonSizeSelect.value = this.touchSettings.buttonSize;
     }
   }
 
@@ -262,6 +307,40 @@ export class SettingsMenu {
           font-size: 16px;
           cursor: pointer;
         }
+
+        .settings-select {
+          flex: 1;
+          padding: 8px 12px;
+          font-size: 14px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.15);
+          color: #f5e6c8;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          cursor: pointer;
+          appearance: none;
+          -webkit-appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23f5e6c8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 12px center;
+          padding-right: 36px;
+        }
+
+        .settings-select:focus {
+          outline: none;
+          border-color: #4ade80;
+        }
+
+        .settings-select option {
+          background: #1a3d17;
+          color: #f5e6c8;
+        }
+
+        .touch-controls-note {
+          color: #888;
+          font-size: 12px;
+          font-style: italic;
+          margin-top: 5px;
+        }
       </style>
 
       <div class="settings-menu-container">
@@ -292,6 +371,29 @@ export class SettingsMenu {
             <input type="checkbox" id="mute-all" class="mute-checkbox">
             <label for="mute-all" class="mute-label">Mute All Audio</label>
           </div>
+        </div>
+
+        <div class="settings-section" id="touch-controls-section">
+          <h2 class="settings-section-title">Touch Controls</h2>
+
+          <div class="settings-control">
+            <label class="settings-label" for="joystick-position">Joystick</label>
+            <select id="joystick-position" class="settings-select">
+              <option value="left">Left Side</option>
+              <option value="right">Right Side</option>
+            </select>
+          </div>
+
+          <div class="settings-control">
+            <label class="settings-label" for="button-size">Button Size</label>
+            <select id="button-size" class="settings-select">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+
+          <p class="touch-controls-note">Touch controls only appear on mobile devices</p>
         </div>
 
         <button class="settings-btn back-btn">Back</button>
@@ -349,6 +451,28 @@ export class SettingsMenu {
     backBtn?.addEventListener('click', () => {
       this.hide();
       this.callbacks.onBack?.();
+    });
+
+    // Touch control settings
+    const joystickSelect = this.menuElement.querySelector('#joystick-position') as HTMLSelectElement;
+    const buttonSizeSelect = this.menuElement.querySelector('#button-size') as HTMLSelectElement;
+
+    joystickSelect?.addEventListener('change', () => {
+      this.touchSettings.joystickPosition = joystickSelect.value as JoystickPosition;
+      this.saveSettings();
+      this.callbacks.onTouchSettingsChanged?.(
+        this.touchSettings.joystickPosition,
+        this.touchSettings.buttonSize
+      );
+    });
+
+    buttonSizeSelect?.addEventListener('change', () => {
+      this.touchSettings.buttonSize = buttonSizeSelect.value as TouchButtonSize;
+      this.saveSettings();
+      this.callbacks.onTouchSettingsChanged?.(
+        this.touchSettings.joystickPosition,
+        this.touchSettings.buttonSize
+      );
     });
   }
 

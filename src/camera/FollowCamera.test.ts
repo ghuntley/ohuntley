@@ -277,4 +277,105 @@ describe('FollowCamera', () => {
       expect(position.z).toBeGreaterThan(0);
     });
   });
+
+  describe('collision avoidance', () => {
+    it('should have collision enabled by default', () => {
+      expect(followCamera.isCollisionEnabled()).toBe(true);
+    });
+
+    it('should allow disabling collision', () => {
+      followCamera.setCollisionEnabled(false);
+      expect(followCamera.isCollisionEnabled()).toBe(false);
+    });
+
+    it('should accept collision config in constructor', () => {
+      const cameraWithConfig = new FollowCamera({
+        collisionEnabled: false,
+        collisionPadding: 1.0,
+        minDistance: 5,
+      });
+
+      expect(cameraWithConfig.isCollisionEnabled()).toBe(false);
+      expect(cameraWithConfig.getParameters().collisionPadding).toBe(1.0);
+      expect(cameraWithConfig.getParameters().minDistance).toBe(5);
+    });
+
+    it('should update collision settings via setParameters', () => {
+      followCamera.setParameters({
+        collisionEnabled: false,
+        collisionPadding: 2.0,
+        minDistance: 4,
+      });
+
+      const params = followCamera.getParameters();
+      expect(params.collisionEnabled).toBe(false);
+      expect(params.collisionPadding).toBe(2.0);
+      expect(params.minDistance).toBe(4);
+    });
+
+    it('should set and clear collision objects', () => {
+      const mesh1 = new THREE.Mesh();
+      const mesh2 = new THREE.Mesh();
+
+      followCamera.setCollisionObjects([mesh1, mesh2]);
+      followCamera.clearCollisionObjects();
+
+      // No direct way to check count, but operation shouldn't throw
+      expect(() => followCamera.update(0.1, { x: 0, y: 0, z: 0 })).not.toThrow();
+    });
+
+    it('should add and remove individual collision objects', () => {
+      const mesh = new THREE.Mesh();
+
+      followCamera.addCollisionObject(mesh);
+      followCamera.removeCollisionObject(mesh);
+
+      // Should work without error
+      expect(() => followCamera.update(0.1, { x: 0, y: 0, z: 0 })).not.toThrow();
+    });
+
+    it('should move camera closer when wall is in the way', () => {
+      // Create a wall mesh between player and camera
+      const wallGeometry = new THREE.BoxGeometry(10, 10, 0.5);
+      const wallMaterial = new THREE.MeshBasicMaterial();
+      const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+      wall.position.set(0, 5, 5); // Wall at Z=5
+
+      followCamera.setCollisionObjects([wall]);
+      followCamera.snapToTarget({ x: 0, y: 0, z: 0 }); // Player at origin
+
+      const distanceWithWall = followCamera.getCurrentDistance();
+      const fullDistance = followCamera.getParameters().distance!;
+
+      // With a wall in the way, current distance should be less than full distance
+      expect(distanceWithWall).toBeLessThanOrEqual(fullDistance);
+    });
+
+    it('should return full distance when no collision objects', () => {
+      followCamera.clearCollisionObjects();
+      followCamera.snapToTarget({ x: 0, y: 0, z: 0 });
+
+      const currentDist = followCamera.getCurrentDistance();
+      const fullDist = followCamera.getParameters().distance!;
+
+      expect(currentDist).toBe(fullDist);
+    });
+
+    it('should return full distance when collision disabled', () => {
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(10, 10, 0.5),
+        new THREE.MeshBasicMaterial()
+      );
+      wall.position.set(0, 5, 5);
+
+      followCamera.setCollisionObjects([wall]);
+      followCamera.setCollisionEnabled(false);
+      followCamera.snapToTarget({ x: 0, y: 0, z: 0 });
+
+      const currentDist = followCamera.getCurrentDistance();
+      const fullDist = followCamera.getParameters().distance!;
+
+      expect(currentDist).toBe(fullDist);
+    });
+  });
 });

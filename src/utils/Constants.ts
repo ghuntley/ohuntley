@@ -187,6 +187,19 @@ export const JOYSTICK_RADIUS = 100;
 /** Joystick dead zone as percentage of radius */
 export const JOYSTICK_DEADZONE = 0.1;
 
+/** Touch button sizes by setting */
+export const TOUCH_BUTTON_SIZES = {
+  SMALL: { button: 56, joystickRadius: 80, joystickThumb: 44 },
+  MEDIUM: { button: 70, joystickRadius: 100, joystickThumb: 60 },
+  LARGE: { button: 84, joystickRadius: 120, joystickThumb: 70 },
+} as const;
+
+/** Touch control position options */
+export type JoystickPosition = 'left' | 'right';
+
+/** Touch button size options */
+export type TouchButtonSize = 'small' | 'medium' | 'large';
+
 // ============================================
 // Audio Constants
 // ============================================

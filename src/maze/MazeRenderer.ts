@@ -339,6 +339,20 @@ export class MazeRenderer {
   }
 
   /**
+   * Get wall meshes for camera collision detection
+   * Returns all wall objects (instanced mesh and boundary pillars)
+   */
+  getWallMeshes(): THREE.Object3D[] {
+    const walls: THREE.Object3D[] = [];
+    this.mazeGroup.traverse((child) => {
+      if (child instanceof THREE.InstancedMesh || (child instanceof THREE.Mesh && child.name !== 'floor' && child.name !== 'startMarker' && child.name !== 'exitMarker')) {
+        walls.push(child);
+      }
+    });
+    return walls;
+  }
+
+  /**
    * Update animation (e.g., exit marker glow)
    */
   update(deltaTime: number): void {

@@ -4,7 +4,13 @@
  */
 
 import { InputManager } from '../systems/InputManager';
-import { JOYSTICK_RADIUS, MIN_TOUCH_TARGET } from '../utils/Constants';
+import {
+  JOYSTICK_RADIUS,
+  MIN_TOUCH_TARGET,
+  TOUCH_BUTTON_SIZES,
+  JoystickPosition,
+  TouchButtonSize,
+} from '../utils/Constants';
 
 /**
  * TouchControls class - manages touch UI overlay
@@ -17,13 +23,19 @@ export class TouchControls {
   private sprintButton: HTMLDivElement | null = null;
   private attackButton: HTMLDivElement | null = null;
   private pauseButton: HTMLDivElement | null = null;
+  private buttonsContainer: HTMLDivElement | null = null;
 
   private inputManager: InputManager;
   private isVisible: boolean = false;
   private animationFrameId: number | null = null;
 
+  // Current settings
+  private joystickPosition: JoystickPosition = 'left';
+  private buttonSize: TouchButtonSize = 'medium';
+
   constructor() {
     this.inputManager = InputManager.getInstance();
+    this.loadSettings();
     this.createStyles();
     this.createTouchControls();
 
@@ -31,6 +43,97 @@ export class TouchControls {
     if (this.inputManager.isTouchDevice()) {
       this.show();
     }
+  }
+
+  /**
+   * Load settings from localStorage
+   */
+  private loadSettings(): void {
+    try {
+      const savedSettings = localStorage.getItem('meerkat-maze-settings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        if (settings.joystickPosition === 'left' || settings.joystickPosition === 'right') {
+          this.joystickPosition = settings.joystickPosition;
+        }
+        if (settings.buttonSize === 'small' || settings.buttonSize === 'medium' || settings.buttonSize === 'large') {
+          this.buttonSize = settings.buttonSize;
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Update joystick position (left or right side)
+   */
+  setJoystickPosition(position: JoystickPosition): void {
+    this.joystickPosition = position;
+    this.applySettings();
+  }
+
+  /**
+   * Update button size
+   */
+  setButtonSize(size: TouchButtonSize): void {
+    this.buttonSize = size;
+    this.applySettings();
+  }
+
+  /**
+   * Apply current settings to the UI
+   */
+  private applySettings(): void {
+    if (!this.joystickContainer || !this.buttonsContainer) return;
+
+    const sizes = TOUCH_BUTTON_SIZES[this.buttonSize.toUpperCase() as keyof typeof TOUCH_BUTTON_SIZES];
+
+    // Apply joystick position
+    if (this.joystickPosition === 'left') {
+      this.joystickContainer.style.left = '30px';
+      this.joystickContainer.style.right = 'auto';
+      this.buttonsContainer.style.right = '30px';
+      this.buttonsContainer.style.left = 'auto';
+    } else {
+      this.joystickContainer.style.right = '30px';
+      this.joystickContainer.style.left = 'auto';
+      this.buttonsContainer.style.left = '30px';
+      this.buttonsContainer.style.right = 'auto';
+    }
+
+    // Apply button sizes
+    this.joystickContainer.style.width = `${sizes.joystickRadius * 2}px`;
+    this.joystickContainer.style.height = `${sizes.joystickRadius * 2}px`;
+
+    if (this.joystickThumb) {
+      this.joystickThumb.style.width = `${sizes.joystickThumb}px`;
+      this.joystickThumb.style.height = `${sizes.joystickThumb}px`;
+    }
+
+    if (this.sprintButton) {
+      this.sprintButton.style.width = `${sizes.button}px`;
+      this.sprintButton.style.height = `${sizes.button}px`;
+    }
+
+    if (this.attackButton) {
+      this.attackButton.style.width = `${sizes.button}px`;
+      this.attackButton.style.height = `${sizes.button}px`;
+    }
+  }
+
+  /**
+   * Get current joystick position setting
+   */
+  getJoystickPosition(): JoystickPosition {
+    return this.joystickPosition;
+  }
+
+  /**
+   * Get current button size setting
+   */
+  getButtonSize(): TouchButtonSize {
+    return this.buttonSize;
   }
 
   /**
@@ -274,6 +377,9 @@ export class TouchControls {
 
     // Register elements with InputManager
     this.registerElementsWithInputManager();
+
+    // Apply saved settings
+    this.applySettings();
   }
 
   /**
@@ -302,8 +408,8 @@ export class TouchControls {
   private createActionButtons(): void {
     if (!this.container) return;
 
-    const buttonsContainer = document.createElement('div');
-    buttonsContainer.className = 'touch-buttons-container';
+    this.buttonsContainer = document.createElement('div');
+    this.buttonsContainer.className = 'touch-buttons-container';
 
     // Attack button (top)
     this.attackButton = document.createElement('div');
@@ -311,7 +417,7 @@ export class TouchControls {
     this.attackButton.innerHTML = '&#x2694;'; // Sword emoji
     this.attackButton.setAttribute('role', 'button');
     this.attackButton.setAttribute('aria-label', 'Attack');
-    buttonsContainer.appendChild(this.attackButton);
+    this.buttonsContainer.appendChild(this.attackButton);
 
     // Sprint button (bottom)
     this.sprintButton = document.createElement('div');
@@ -319,9 +425,9 @@ export class TouchControls {
     this.sprintButton.innerHTML = '&#x1F3C3;'; // Running emoji
     this.sprintButton.setAttribute('role', 'button');
     this.sprintButton.setAttribute('aria-label', 'Sprint');
-    buttonsContainer.appendChild(this.sprintButton);
+    this.buttonsContainer.appendChild(this.sprintButton);
 
-    this.container.appendChild(buttonsContainer);
+    this.container.appendChild(this.buttonsContainer);
   }
 
   /**
@@ -348,11 +454,13 @@ export class TouchControls {
     this.joystickContainer = this.container.querySelector('.touch-joystick-container');
     this.joystickBase = this.container.querySelector('.touch-joystick-base');
     this.joystickThumb = this.container.querySelector('.touch-joystick-thumb');
+    this.buttonsContainer = this.container.querySelector('.touch-buttons-container');
     this.sprintButton = this.container.querySelector('.touch-button-sprint');
     this.attackButton = this.container.querySelector('.touch-button-attack');
     this.pauseButton = this.container.querySelector('.touch-button-pause');
 
     this.registerElementsWithInputManager();
+    this.applySettings();
   }
 
   /**

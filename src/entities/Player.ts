@@ -326,6 +326,13 @@ export class Player {
   }
 
   /**
+   * Refill sprint gauge to full capacity
+   */
+  refillSprint(): void {
+    this.sprintGauge = this.sprintCapacity;
+  }
+
+  /**
    * Check if a point is within collision distance
    */
   checkCollision(point: Position): boolean {

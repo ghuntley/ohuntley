@@ -310,4 +310,62 @@ describe('TouchControls', () => {
       secondControls.dispose();
     });
   });
+
+  describe('settings', () => {
+    beforeEach(() => {
+      // Clear localStorage before each test
+      localStorage.removeItem('meerkat-maze-settings');
+      touchControls = new TouchControls();
+    });
+
+    it('should default to left joystick position', () => {
+      expect(touchControls.getJoystickPosition()).toBe('left');
+    });
+
+    it('should default to medium button size', () => {
+      expect(touchControls.getButtonSize()).toBe('medium');
+    });
+
+    it('should allow setting joystick position to right', () => {
+      touchControls.setJoystickPosition('right');
+      expect(touchControls.getJoystickPosition()).toBe('right');
+    });
+
+    it('should allow setting button size to small', () => {
+      touchControls.setButtonSize('small');
+      expect(touchControls.getButtonSize()).toBe('small');
+    });
+
+    it('should allow setting button size to large', () => {
+      touchControls.setButtonSize('large');
+      expect(touchControls.getButtonSize()).toBe('large');
+    });
+
+    it('should apply joystick position to DOM', () => {
+      touchControls.setJoystickPosition('right');
+      const joystickContainer = document.querySelector('.touch-joystick-container') as HTMLElement;
+      expect(joystickContainer?.style.right).toBe('30px');
+    });
+
+    it('should apply button size to DOM', () => {
+      touchControls.setButtonSize('large');
+      const sprintButton = document.querySelector('.touch-button-sprint') as HTMLElement;
+      expect(sprintButton?.style.width).toBe('84px');
+    });
+
+    it('should load settings from localStorage', () => {
+      // Set up settings in localStorage
+      localStorage.setItem('meerkat-maze-settings', JSON.stringify({
+        joystickPosition: 'right',
+        buttonSize: 'small'
+      }));
+
+      // Dispose current and create new to load settings
+      touchControls.dispose();
+      touchControls = new TouchControls();
+
+      expect(touchControls.getJoystickPosition()).toBe('right');
+      expect(touchControls.getButtonSize()).toBe('small');
+    });
+  });
 });
