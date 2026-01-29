@@ -1039,8 +1039,21 @@ export class Game {
     }
 
     // Get input
-    const moveInput = this.inputManager.getMovementDirection();
+    const rawInput = this.inputManager.getMovementDirection();
     const sprintInput = this.inputManager.isActionActive(InputAction.SPRINT);
+
+    // Transform input to be relative to camera/player direction
+    // This makes W always move "forward" (away from camera)
+    const playerRotation = this.player.getRotation();
+    const cosR = Math.cos(playerRotation);
+    const sinR = Math.sin(playerRotation);
+
+    // Rotate input by player's current rotation
+    // Input y (forward/back) maps to world z, input x (left/right) maps to world x
+    const moveInput = {
+      x: rawInput.x * cosR - rawInput.y * sinR,
+      y: rawInput.x * sinR + rawInput.y * cosR,
+    };
 
     // Apply speed multiplier from power-ups
     const speedMultiplier = this.powerUpEffects.getSpeedMultiplier();
