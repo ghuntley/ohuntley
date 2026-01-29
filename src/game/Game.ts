@@ -48,6 +48,10 @@ import { MazeRenderer } from '../maze/MazeRenderer';
 import { FollowCamera } from '../camera/FollowCamera';
 import { ScreenShake } from '../camera/ScreenShake';
 
+// Debug & Minimap
+import { DebugOverlay, DebugData } from '../ui/DebugOverlay';
+import { Minimap, MinimapData } from '../ui/Minimap';
+
 /**
  * Main Game class for Meerkat Maze Runner
  * Manages the game loop, scene, and core systems
@@ -95,8 +99,11 @@ export class Game {
   private performanceManager: PerformanceManager;
   private screenShake: ScreenShake;
 
-  // Debug
+  // Debug & Minimap
   private debugMode: boolean;
+  private debugOverlay: DebugOverlay;
+  private minimap: Minimap;
+  private levelSeed: number;
 
   // UI Manager
   private uiManager: UIManager;
@@ -117,6 +124,7 @@ export class Game {
     this.animationFrameId = null;
     this.debugMode = false;
     this.currentLevel = 1;
+    this.levelSeed = 0;
 
     // Initialize game state
     this.gameState = new GameState(GameStateType.MENU);
@@ -162,6 +170,11 @@ export class Game {
       isMobile: this.performanceManager.getIsMobile(),
     });
     this.screenShake = new ScreenShake(this.camera);
+
+    // Initialize debug overlay and minimap
+    this.debugOverlay = new DebugOverlay();
+    this.debugOverlay.setScene(this.scene);
+    this.minimap = new Minimap();
 
     // Initialize timer and stats
     this.levelTimeRemaining = 0;
@@ -443,6 +456,9 @@ export class Game {
         case 'Backquote':
           this.toggleDebugMode();
           break;
+        case 'KeyM':
+          this.minimap.toggle();
+          break;
         case 'Enter':
           // Start game from menu or restart
           if (this.gameState.is(GameStateType.MENU)) {
@@ -503,6 +519,7 @@ export class Game {
    */
   private toggleDebugMode(): void {
     this.debugMode = !this.debugMode;
+    this.debugOverlay.toggle();
     console.log(`Debug mode: ${this.debugMode ? 'ON' : 'OFF'}`);
   }
 
@@ -574,11 +591,12 @@ export class Game {
     // Determine maze size based on level
     const mazeSize = this.getMazeSizeForLevel(level);
 
-    // Generate new maze
+    // Generate new maze with seed
+    this.levelSeed = Date.now() + level;
     this.mazeGenerator = new MazeGenerator({
       width: mazeSize,
       height: mazeSize,
-      seed: Date.now() + level,
+      seed: this.levelSeed,
     });
     this.mazeGenerator.generate();
 
@@ -614,6 +632,10 @@ export class Game {
 
     // Spawn spectator meerkats on hedge walls
     this.spectatorManager.spawn(this.mazeGenerator);
+
+    // Initialize minimap and debug grid with maze
+    this.minimap.setMaze(this.mazeGenerator);
+    this.debugOverlay.setupGrid(this.mazeGenerator);
 
     // Reset power-up effects
     this.powerUpEffects.reset();
@@ -1248,6 +1270,68 @@ export class Game {
         duration: effect.duration,
       })),
     });
+
+    // Update debug overlay
+    if (this.debugMode) {
+      const playerPos = this.player.getPosition();
+      const playerGridPos = {
+        x: Math.floor(playerPos.x / CELL_SIZE),
+        y: Math.floor(playerPos.z / CELL_SIZE),
+      };
+
+      const debugData: DebugData = {
+        fps: 1 / deltaTime,
+        frameTime: deltaTime * 1000,
+        entityCount: this.zombies.length + this.powerUps.length + (this.sword ? 1 : 0) + 1,
+        zombieCount: this.zombies.filter(z => z.isAlive()).length,
+        seed: this.levelSeed,
+        playerPosition: playerPos,
+        playerGridPosition: playerGridPos,
+        cameraPosition: {
+          x: this.camera.position.x,
+          y: this.camera.position.y,
+          z: this.camera.position.z,
+        },
+      };
+      this.debugOverlay.update(debugData);
+
+      // Update collision visualization
+      const vizOptions = this.debugOverlay.getVisualizationOptions();
+      if (vizOptions.showCollision) {
+        this.debugOverlay.updateCollisionVisualization(
+          playerPos,
+          this.player.getCollisionRadius(),
+          this.zombies.filter(z => z.isAlive()).map(z => ({
+            x: z.getPosition().x,
+            y: z.getPosition().y,
+            z: z.getPosition().z,
+            radius: 0.5,
+          }))
+        );
+      }
+    }
+
+    // Update minimap
+    if (this.minimap.getIsVisible()) {
+      const minimapData: MinimapData = {
+        playerPosition: this.player.getPosition(),
+        playerRotation: this.player.getRotation(),
+        zombiePositions: this.zombies.filter(z => z.isAlive()).map(z => ({
+          x: z.getPosition().x,
+          y: z.getPosition().y,
+          z: z.getPosition().z,
+          isChasing: z.getState() === ZombieState.CHASE,
+        })),
+        powerUpPositions: this.powerUps.filter(p => p.isAvailable()).map(p => ({
+          x: p.getPosition().x,
+          y: p.getPosition().y,
+          z: p.getPosition().z,
+          type: p.getType(),
+        })),
+        swordPosition: this.sword && this.sword.isAvailable() ? this.sword.getPosition() : undefined,
+      };
+      this.minimap.update(minimapData);
+    }
 
     // Update entity meshes
     this.updateMeshes();

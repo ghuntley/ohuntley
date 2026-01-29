@@ -50,6 +50,17 @@
 - [x] SpectatorMeerkatManager (spawning on hedge tops)
 - [x] Danger alert behavior (agitated movement when zombies near)
 
+### Phase 7: Debug Tools & Minimap ✅
+- [x] DebugOverlay component (FPS counter, frame time, entity count)
+- [x] Level seed display for reproducible testing
+- [x] Player position display (world and grid coordinates)
+- [x] Collision visualization toggle (player and zombie collision circles)
+- [x] Pathfinding visualization toggle (zombie paths)
+- [x] Grid overlay toggle
+- [x] Minimap component with fog of war
+- [x] Minimap shows player, zombies, exit, power-ups, sword
+- [x] Keyboard shortcuts: backtick (`) for debug mode, M for minimap
+
 ## Current Implementation Notes
 
 ### Maze Generator
@@ -220,3 +231,25 @@
 - Saves next level number and total time survived
 - Continue button appears when save exists
 - Progress cleared on game over or new game start
+
+### Debug Overlay
+- Toggle with backtick (`) key
+- FPS counter with color-coded status (green/yellow/red)
+- Frame time display in milliseconds
+- Entity count and active zombie count
+- Level seed display for reproducibility
+- Player world position (x, y, z) and grid position (cell coordinates)
+- Camera position display
+- Visualization toggles: collision circles, pathfinding paths, grid overlay
+- 3D visualization helpers added to scene when enabled
+
+### Minimap
+- Toggle with M key
+- Canvas-based top-down view of maze
+- Fog of war system: unexplored areas hidden
+- Player position shown as directional triangle
+- Zombie positions shown as red dots (brighter when chasing)
+- Exit marker always visible as gold star
+- Power-ups and sword positions shown when in explored area
+- Automatic exploration radius around player (3 cells)
+- Legend showing marker meanings
