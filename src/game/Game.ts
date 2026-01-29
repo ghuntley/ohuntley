@@ -28,6 +28,8 @@ import { CollisionSystem } from '../systems/CollisionSystem';
 import { CombatSystem } from '../systems/CombatSystem';
 import { Pathfinding } from '../systems/Pathfinding';
 import { AudioManager, MusicTheme, SoundEffect } from '../systems/AudioManager';
+import { ParticleSystem, ParticleEffectType } from '../systems/ParticleSystem';
+import { PerformanceManager } from '../systems/PerformanceManager';
 
 // Maze
 import { MazeGenerator, Point } from '../maze/MazeGenerator';
@@ -35,6 +37,7 @@ import { MazeRenderer } from '../maze/MazeRenderer';
 
 // Camera
 import { FollowCamera } from '../camera/FollowCamera';
+import { ScreenShake } from '../camera/ScreenShake';
 
 /**
  * Main Game class for Meerkat Maze Runner
@@ -79,6 +82,9 @@ export class Game {
   private followCamera: FollowCamera;
   private powerUpEffects: PowerUpEffectManager;
   private audioManager: AudioManager;
+  private particleSystem: ParticleSystem;
+  private performanceManager: PerformanceManager;
+  private screenShake: ScreenShake;
 
   // Debug
   private debugMode: boolean;
@@ -130,6 +136,11 @@ export class Game {
     this.swordMesh = null;
     this.powerUpMeshes = new Map();
 
+    // Initialize performance manager first (affects other systems)
+    this.performanceManager = PerformanceManager.getInstance();
+    this.performanceManager.applyToRenderer(this.renderer);
+    this.performanceManager.applyToScene(this.scene);
+
     // Initialize systems
     this.inputManager = InputManager.getInstance();
     this.inputManager.initialize();
@@ -138,6 +149,10 @@ export class Game {
     this.followCamera = new FollowCamera(this.camera);
     this.powerUpEffects = new PowerUpEffectManager();
     this.audioManager = AudioManager.getInstance();
+    this.particleSystem = new ParticleSystem(this.scene, {
+      isMobile: this.performanceManager.getIsMobile(),
+    });
+    this.screenShake = new ScreenShake(this.camera);
 
     // Initialize timer and stats
     this.levelTimeRemaining = 0;
@@ -225,6 +240,8 @@ export class Game {
    * Set up scene lighting
    */
   private setupLighting(): void {
+    const settings = this.performanceManager.getSettings();
+
     // Ambient light for base illumination
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     this.scene.add(ambientLight);
@@ -232,18 +249,20 @@ export class Game {
     // Directional light for sun-like shadows
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(50, 100, 50);
-    directionalLight.castShadow = true;
 
-    // Configure shadow properties
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.camera.near = 0.5;
-    directionalLight.shadow.camera.far = 200;
-    directionalLight.shadow.camera.left = -50;
-    directionalLight.shadow.camera.right = 50;
-    directionalLight.shadow.camera.top = 50;
-    directionalLight.shadow.camera.bottom = -50;
-    directionalLight.shadow.bias = -0.0001;
+    // Apply performance-based shadow settings
+    this.performanceManager.applyToLight(directionalLight);
+
+    if (settings.shadowsEnabled) {
+      // Configure shadow camera
+      directionalLight.shadow.camera.near = 0.5;
+      directionalLight.shadow.camera.far = 200;
+      directionalLight.shadow.camera.left = -50;
+      directionalLight.shadow.camera.right = 50;
+      directionalLight.shadow.camera.top = 50;
+      directionalLight.shadow.camera.bottom = -50;
+      directionalLight.shadow.bias = -0.0001;
+    }
 
     this.scene.add(directionalLight);
 
@@ -483,6 +502,20 @@ export class Game {
     // Play sword swing sound when player has sword
     if (this.player.getHasSword()) {
       this.audioManager.play(SoundEffect.SWORD_SWING);
+
+      // Emit sword trail effect
+      const playerPos = this.player.getPosition();
+      const playerRotation = this.player.getRotation();
+      const attackDirection = new THREE.Vector3(
+        Math.sin(playerRotation),
+        0,
+        Math.cos(playerRotation)
+      );
+      this.particleSystem.emit(
+        ParticleEffectType.SWORD_TRAIL,
+        new THREE.Vector3(playerPos.x, 1.2, playerPos.z),
+        { direction: attackDirection }
+      );
     }
 
     const result = this.combatSystem.attack(this.player, this.zombies);
@@ -491,7 +524,17 @@ export class Game {
       // Play sword hit sound
       this.audioManager.play(SoundEffect.SWORD_HIT);
 
+      // Screen shake for combat feedback
+      this.screenShake.shake(0.2, 0.1);
+
       result.hitZombies.forEach((zombie) => {
+        // Emit zombie hit particles at zombie position
+        const zombiePos = zombie.getPosition();
+        this.particleSystem.emit(
+          ParticleEffectType.ZOMBIE_HIT,
+          new THREE.Vector3(zombiePos.x, 1, zombiePos.z)
+        );
+
         zombie.die();
         this.zombiesKilledThisLevel++;
         this.uiManager.addZombieKill();
@@ -826,6 +869,9 @@ export class Game {
 
     // Clear spectator meerkats
     this.spectatorManager.clear();
+
+    // Clear particle effects
+    this.particleSystem.clear();
   }
 
   /**
@@ -949,10 +995,21 @@ export class Game {
       if (
         this.sword.checkCollection(this.player.getPosition(), this.player.getCollisionRadius())
       ) {
+        // Get position before collecting
+        const swordPos = this.sword.getPosition();
+
         this.sword.collect();
         this.player.pickupSword();
         // Play pickup sound
         this.audioManager.play(SoundEffect.POWERUP_PICKUP);
+
+        // Emit collection particles (silver/white for sword)
+        this.particleSystem.emit(
+          ParticleEffectType.POWERUP_COLLECT,
+          new THREE.Vector3(swordPos.x, 1, swordPos.z),
+          { color: 0xc0c0c0 }
+        );
+
         console.log('Sword collected!');
         // Hide sword mesh
         if (this.swordMesh) {
@@ -968,12 +1025,24 @@ export class Game {
         if (
           powerUp.checkCollection(this.player.getPosition(), this.player.getCollisionRadius())
         ) {
+          // Get position and color before collecting
+          const powerUpPos = powerUp.getPosition();
+          const powerUpColor = powerUp.getVisual().color;
+
           powerUp.collect();
           this.powerUpEffects.applyEffect(powerUp.getType());
           this.powerUpsCollectedThisLevel++;
           this.uiManager.addPowerUpCollected();
           // Play pickup sound
           this.audioManager.play(SoundEffect.POWERUP_PICKUP);
+
+          // Emit power-up collection particles
+          this.particleSystem.emit(
+            ParticleEffectType.POWERUP_COLLECT,
+            new THREE.Vector3(powerUpPos.x, 1, powerUpPos.z),
+            { color: powerUpColor }
+          );
+
           console.log(`Power-up collected: ${powerUp.getType()}`);
           // Hide power-up mesh
           const mesh = this.powerUpMeshes.get(powerUp.getId());
@@ -1000,9 +1069,17 @@ export class Game {
           // Check if player has shield
           if (this.powerUpEffects.useShield()) {
             console.log('Shield protected player!');
+            // Emit shield break particles
+            const playerPos = this.player.getPosition();
+            this.particleSystem.emit(
+              ParticleEffectType.SHIELD_BREAK,
+              new THREE.Vector3(playerPos.x, 1, playerPos.z)
+            );
+            // Screen shake for impact
+            this.screenShake.shake(0.4, 0.2);
+
             // Push zombie back slightly
             const zombiePos = zombie.getPosition();
-            const playerPos = this.player.getPosition();
             const dx = zombiePos.x - playerPos.x;
             const dz = zombiePos.z - playerPos.z;
             const dist = Math.sqrt(dx * dx + dz * dz);
@@ -1035,6 +1112,15 @@ export class Game {
 
     // Update camera
     this.followCamera.update(deltaTime, this.player.getPosition());
+
+    // Update screen shake (applied after camera positioning)
+    this.screenShake.update(deltaTime);
+
+    // Update particle system
+    this.particleSystem.update(deltaTime);
+
+    // Track frame for performance monitoring
+    this.performanceManager.trackFrame();
 
     // Update audio (music switching based on zombie proximity, footsteps)
     const isPlayerMoving = this.inputManager.isMoving();

@@ -175,3 +175,47 @@ export const DEFAULT_MUSIC_VOLUME = 0.5;
 
 /** Default SFX volume (0-1) */
 export const DEFAULT_SFX_VOLUME = 0.7;
+
+// ============================================
+// Particle Constants
+// ============================================
+
+/** Maximum active particle effects */
+export const MAX_PARTICLE_EFFECTS = 20;
+
+/** Particle pool size per effect type */
+export const PARTICLE_POOL_SIZE = 10;
+
+/** Mobile particle count multiplier (0-1) */
+export const MOBILE_PARTICLE_MULTIPLIER = 0.5;
+
+// ============================================
+// Mobile & Performance Constants
+// ============================================
+
+/** Mobile device shadow map size */
+export const MOBILE_SHADOW_MAP_SIZE = 1024;
+
+/** Desktop shadow map size */
+export const DESKTOP_SHADOW_MAP_SIZE = 2048;
+
+/** Mobile fog near distance */
+export const MOBILE_FOG_NEAR = 20;
+
+/** Mobile fog far distance */
+export const MOBILE_FOG_FAR = 60;
+
+/** Desktop fog near distance */
+export const DESKTOP_FOG_NEAR = 30;
+
+/** Desktop fog far distance */
+export const DESKTOP_FOG_FAR = 100;
+
+/** Mobile pixel ratio cap */
+export const MOBILE_PIXEL_RATIO_CAP = 2;
+
+/** Screen shake duration in seconds */
+export const SCREEN_SHAKE_DURATION = 0.15;
+
+/** Screen shake intensity */
+export const SCREEN_SHAKE_INTENSITY = 0.3;

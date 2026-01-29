@@ -37,12 +37,12 @@
 - [x] Audio Manager (Web Audio API with synthetic sounds)
 - [x] Background music (safe/danger themes with crossfade)
 - [x] Sound effects (footsteps, attacks, pickups, zombie sounds)
-- [ ] Particle effects
+- [x] Particle effects (sword trail, zombie hit, power-up collect, shield break)
 
-### Phase 6: Mobile & Polish (Partial) ✅
+### Phase 6: Mobile & Polish ✅
 - [x] Touch controls (virtual joystick, action buttons)
-- [ ] Mobile optimizations
-- [ ] Performance tuning
+- [x] Mobile optimizations (PerformanceManager with auto-tier detection)
+- [x] Performance tuning (shadow quality, fog distance, particle scaling)
 - [ ] Bug fixes and balancing
 
 ### Bonus: Spectator Meerkats ✅
@@ -160,3 +160,27 @@
 - Auto-shows on touch devices, hidden on desktop
 - Dead zone handling (10% radius) prevents accidental movement
 - Visual feedback on button presses
+
+### Particle System
+- GPU-accelerated using Three.js Points with BufferGeometry
+- Effect types: SWORD_TRAIL, ZOMBIE_HIT, POWERUP_COLLECT, SHIELD_BREAK, FOOTSTEP_DUST
+- Particle pooling for memory efficiency
+- Configurable per-effect: count, color, size, lifetime, velocity, gravity
+- Mobile-aware with automatic particle count reduction
+- Emission shapes: point, sphere, cone
+- Fade and shrink over lifetime support
+
+### Performance Manager
+- Singleton pattern for global performance control
+- Auto-detects mobile devices (touch + screen size + user agent)
+- Three performance tiers: LOW, MEDIUM, HIGH
+- GPU detection via WebGL debug info
+- Settings per tier: shadow map size, fog distance, particle multiplier, pixel ratio
+- FPS tracking with auto-tier adjustment when FPS drops
+- Applies settings to renderer, scene, and lights
+
+### Screen Shake
+- Combat feedback for successful hits
+- Configurable intensity and duration
+- Decay over time for natural feel
+- Applied after camera positioning in game loop
