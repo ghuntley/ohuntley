@@ -27,6 +27,7 @@ export interface FollowCameraConfig {
  */
 export class FollowCamera {
   private camera: THREE.PerspectiveCamera;
+  private ownsCamera: boolean;
 
   // Camera parameters
   private angle: number; // Angle from horizontal in radians
@@ -43,20 +44,35 @@ export class FollowCamera {
   // Player position tracking
   private playerPosition: THREE.Vector3;
 
-  constructor(config: FollowCameraConfig = {}) {
+  /**
+   * Create a FollowCamera
+   * @param cameraOrConfig Either an existing camera to control, or a config object
+   */
+  constructor(cameraOrConfig?: THREE.PerspectiveCamera | FollowCameraConfig) {
+    // Determine if we were passed a camera or config
+    let config: FollowCameraConfig = {};
+
+    if (cameraOrConfig instanceof THREE.PerspectiveCamera) {
+      // Use the provided camera
+      this.camera = cameraOrConfig;
+      this.ownsCamera = false;
+    } else {
+      // Use config, create our own camera
+      config = cameraOrConfig ?? {};
+      this.camera = new THREE.PerspectiveCamera(
+        config.fov ?? CAMERA_FOV,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      this.ownsCamera = true;
+    }
+
     // Initialize parameters from config or constants
     this.angle = ((config.angle ?? CAMERA_ANGLE) * Math.PI) / 180; // Convert to radians
     this.distance = config.distance ?? CAMERA_DISTANCE;
     this.heightOffset = config.heightOffset ?? CAMERA_HEIGHT_OFFSET;
     this.followSpeed = config.followSpeed ?? CAMERA_FOLLOW_SPEED;
-
-    // Create camera
-    this.camera = new THREE.PerspectiveCamera(
-      config.fov ?? CAMERA_FOV,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
 
     // Initialize vectors
     this.targetPosition = new THREE.Vector3();
