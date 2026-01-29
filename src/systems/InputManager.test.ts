@@ -276,4 +276,130 @@ describe('InputManager', () => {
       expect(actions.length).toBe(2);
     });
   });
+
+  describe('touch input', () => {
+    describe('isTouchDevice', () => {
+      it('should return a boolean', () => {
+        expect(typeof inputManager.isTouchDevice()).toBe('boolean');
+      });
+    });
+
+    describe('joystick simulation', () => {
+      it('should update joystick direction when simulated', () => {
+        inputManager.simulateTouchJoystick({ x: 0.5, y: -0.5 });
+
+        const direction = inputManager.getJoystickDirection();
+        expect(direction.x).toBe(0.5);
+        expect(direction.y).toBe(-0.5);
+      });
+
+      it('should set joystick as active when direction is non-zero', () => {
+        inputManager.simulateTouchJoystick({ x: 1, y: 0 });
+
+        const state = inputManager.getJoystickState();
+        expect(state.active).toBe(true);
+      });
+
+      it('should set joystick as inactive when direction is zero', () => {
+        inputManager.simulateTouchJoystick({ x: 0, y: 0 });
+
+        const state = inputManager.getJoystickState();
+        expect(state.active).toBe(false);
+      });
+
+      it('should prioritize joystick over keyboard for movement direction', () => {
+        inputManager.simulateKeyDown('KeyW'); // keyboard up
+        inputManager.simulateTouchJoystick({ x: 1, y: 0 }); // joystick right
+
+        const direction = inputManager.getMovementDirection();
+        expect(direction.x).toBe(1);
+        expect(direction.y).toBe(0);
+      });
+
+      it('should fall back to keyboard when joystick is inactive', () => {
+        inputManager.simulateKeyDown('KeyW');
+        inputManager.simulateTouchJoystick({ x: 0, y: 0 });
+
+        const direction = inputManager.getMovementDirection();
+        expect(direction.x).toBe(0);
+        expect(direction.y).toBe(-1);
+      });
+    });
+
+    describe('touch button simulation', () => {
+      it('should activate sprint action when sprint button pressed', () => {
+        inputManager.simulateTouchButton('sprint', true);
+
+        expect(inputManager.isActionActive(InputAction.SPRINT)).toBe(true);
+        expect(inputManager.isTouchSprintActive()).toBe(true);
+      });
+
+      it('should deactivate sprint action when sprint button released', () => {
+        inputManager.simulateTouchButton('sprint', true);
+        inputManager.simulateTouchButton('sprint', false);
+
+        expect(inputManager.isActionActive(InputAction.SPRINT)).toBe(false);
+        expect(inputManager.isTouchSprintActive()).toBe(false);
+      });
+
+      it('should activate attack action when attack button pressed', () => {
+        inputManager.simulateTouchButton('attack', true);
+
+        expect(inputManager.isActionActive(InputAction.ATTACK)).toBe(true);
+        expect(inputManager.isTouchAttackActive()).toBe(true);
+      });
+
+      it('should deactivate attack action when attack button released', () => {
+        inputManager.simulateTouchButton('attack', true);
+        inputManager.simulateTouchButton('attack', false);
+
+        expect(inputManager.isActionActive(InputAction.ATTACK)).toBe(false);
+        expect(inputManager.isTouchAttackActive()).toBe(false);
+      });
+
+      it('should activate pause action when pause button pressed', () => {
+        inputManager.simulateTouchButton('pause', true);
+
+        expect(inputManager.isActionActive(InputAction.PAUSE)).toBe(true);
+      });
+
+      it('should trigger callbacks when touch buttons are pressed', () => {
+        const callback = vi.fn();
+        inputManager.addActionCallback(callback);
+
+        inputManager.simulateTouchButton('sprint', true);
+
+        expect(callback).toHaveBeenCalledWith(InputAction.SPRINT, true);
+      });
+    });
+
+    describe('element registration', () => {
+      it('should allow setting joystick element', () => {
+        const mockElement = document.createElement('div');
+        expect(() => inputManager.setJoystickElement(mockElement)).not.toThrow();
+      });
+
+      it('should allow setting sprint button element', () => {
+        const mockElement = document.createElement('div');
+        expect(() => inputManager.setSprintButtonElement(mockElement)).not.toThrow();
+      });
+
+      it('should allow setting attack button element', () => {
+        const mockElement = document.createElement('div');
+        expect(() => inputManager.setAttackButtonElement(mockElement)).not.toThrow();
+      });
+
+      it('should allow setting pause button element', () => {
+        const mockElement = document.createElement('div');
+        expect(() => inputManager.setPauseButtonElement(mockElement)).not.toThrow();
+      });
+
+      it('should allow setting elements to null', () => {
+        expect(() => inputManager.setJoystickElement(null)).not.toThrow();
+        expect(() => inputManager.setSprintButtonElement(null)).not.toThrow();
+        expect(() => inputManager.setAttackButtonElement(null)).not.toThrow();
+        expect(() => inputManager.setPauseButtonElement(null)).not.toThrow();
+      });
+    });
+  });
 });

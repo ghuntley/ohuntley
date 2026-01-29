@@ -20,12 +20,14 @@ import { Player } from '../entities/Player';
 import { Zombie, ZombieState } from '../entities/Zombie';
 import { Sword } from '../entities/Sword';
 import { PowerUp, PowerUpType, PowerUpEffectManager } from '../entities/PowerUp';
+import { SpectatorMeerkatManager } from '../entities/SpectatorMeerkatManager';
 
 // Systems
 import { InputManager, InputAction } from '../systems/InputManager';
 import { CollisionSystem } from '../systems/CollisionSystem';
 import { CombatSystem } from '../systems/CombatSystem';
 import { Pathfinding } from '../systems/Pathfinding';
+import { AudioManager, MusicTheme, SoundEffect } from '../systems/AudioManager';
 
 // Maze
 import { MazeGenerator, Point } from '../maze/MazeGenerator';
@@ -62,6 +64,7 @@ export class Game {
   private zombies: Zombie[];
   private sword: Sword | null;
   private powerUps: PowerUp[];
+  private spectatorManager: SpectatorMeerkatManager;
 
   // 3D Meshes for entities
   private playerMesh: THREE.Mesh | null;
@@ -75,6 +78,7 @@ export class Game {
   private combatSystem: CombatSystem;
   private followCamera: FollowCamera;
   private powerUpEffects: PowerUpEffectManager;
+  private audioManager: AudioManager;
 
   // Debug
   private debugMode: boolean;
@@ -118,6 +122,7 @@ export class Game {
     this.zombies = [];
     this.sword = null;
     this.powerUps = [];
+    this.spectatorManager = new SpectatorMeerkatManager(this.scene);
 
     // Initialize 3D mesh maps
     this.playerMesh = null;
@@ -132,6 +137,7 @@ export class Game {
     this.combatSystem = new CombatSystem();
     this.followCamera = new FollowCamera(this.camera);
     this.powerUpEffects = new PowerUpEffectManager();
+    this.audioManager = AudioManager.getInstance();
 
     // Initialize timer and stats
     this.levelTimeRemaining = 0;
@@ -168,6 +174,22 @@ export class Game {
 
     // Set up power-up effect callbacks
     this.setupPowerUpCallbacks();
+
+    // Initialize audio (will be fully enabled after first user interaction)
+    this.initializeAudio();
+  }
+
+  /**
+   * Initialize the audio system
+   */
+  private async initializeAudio(): Promise<void> {
+    try {
+      await this.audioManager.initialize(this.camera);
+      await this.audioManager.preload();
+      console.log('Audio system initialized');
+    } catch (error) {
+      console.warn('Audio initialization failed:', error);
+    }
   }
 
   /**
@@ -346,10 +368,15 @@ export class Game {
       switch (newState) {
         case GameStateType.PLAYING:
           this.clock.start();
+          this.audioManager.resume();
+          this.audioManager.playMusic(MusicTheme.SAFE);
           break;
         case GameStateType.PAUSED:
+          this.audioManager.suspend();
           break;
         case GameStateType.GAME_OVER:
+          this.audioManager.stopMusic();
+          this.audioManager.play(SoundEffect.GAME_OVER);
           this.uiManager.showGameOver({
             level: this.currentLevel,
             totalTimeSurvived: this.totalTimeSurvived,
@@ -357,6 +384,8 @@ export class Game {
           });
           break;
         case GameStateType.LEVEL_COMPLETE:
+          this.audioManager.stopMusic();
+          this.audioManager.play(SoundEffect.LEVEL_COMPLETE);
           this.uiManager.showLevelComplete({
             level: this.currentLevel,
             timeRemaining: this.levelTimeRemaining,
@@ -366,6 +395,7 @@ export class Game {
           break;
         case GameStateType.MENU:
           this.clock.stop();
+          this.audioManager.stopMusic();
           break;
       }
     });
@@ -450,13 +480,25 @@ export class Game {
    * Handle attack action
    */
   private handleAttack(): void {
+    // Play sword swing sound when player has sword
+    if (this.player.getHasSword()) {
+      this.audioManager.play(SoundEffect.SWORD_SWING);
+    }
+
     const result = this.combatSystem.attack(this.player, this.zombies);
 
     if (result.hit) {
+      // Play sword hit sound
+      this.audioManager.play(SoundEffect.SWORD_HIT);
+
       result.hitZombies.forEach((zombie) => {
         zombie.die();
         this.zombiesKilledThisLevel++;
         this.uiManager.addZombieKill();
+        // Play zombie death sound
+        this.audioManager.play(SoundEffect.ZOMBIE_DEATH);
+        // Clean up zombie audio
+        this.audioManager.removeZombieAudio(zombie.getId());
         console.log(`Zombie ${zombie.getId()} killed!`);
       });
     }
@@ -508,6 +550,9 @@ export class Game {
 
     // Spawn power-ups
     this.spawnPowerUps(level);
+
+    // Spawn spectator meerkats on hedge walls
+    this.spectatorManager.spawn(this.mazeGenerator);
 
     // Reset power-up effects
     this.powerUpEffects.reset();
@@ -778,6 +823,9 @@ export class Game {
     });
     this.powerUps = [];
     this.powerUpMeshes.clear();
+
+    // Clear spectator meerkats
+    this.spectatorManager.clear();
   }
 
   /**
@@ -903,6 +951,8 @@ export class Game {
       ) {
         this.sword.collect();
         this.player.pickupSword();
+        // Play pickup sound
+        this.audioManager.play(SoundEffect.POWERUP_PICKUP);
         console.log('Sword collected!');
         // Hide sword mesh
         if (this.swordMesh) {
@@ -922,6 +972,8 @@ export class Game {
           this.powerUpEffects.applyEffect(powerUp.getType());
           this.powerUpsCollectedThisLevel++;
           this.uiManager.addPowerUpCollected();
+          // Play pickup sound
+          this.audioManager.play(SoundEffect.POWERUP_PICKUP);
           console.log(`Power-up collected: ${powerUp.getType()}`);
           // Hide power-up mesh
           const mesh = this.powerUpMeshes.get(powerUp.getId());
@@ -975,8 +1027,18 @@ export class Game {
     // Update maze renderer animations
     this.mazeRenderer.update(deltaTime);
 
+    // Update spectator meerkats
+    const zombiePositions = this.zombies
+      .filter((z) => z.isAlive())
+      .map((z) => z.getPosition());
+    this.spectatorManager.update(deltaTime, this.player.getPosition(), zombiePositions);
+
     // Update camera
     this.followCamera.update(deltaTime, this.player.getPosition());
+
+    // Update audio (music switching based on zombie proximity, footsteps)
+    const isPlayerMoving = this.inputManager.isMoving();
+    this.audioManager.update(this.player.getPosition(), this.zombies, isPlayerMoving);
 
     // Update HUD
     this.uiManager.updateHUD({

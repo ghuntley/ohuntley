@@ -33,17 +33,22 @@
 - [x] Game Over / Victory screens
 - [x] Leaderboard with LocalStorage persistence
 
-### Phase 5: Audio & Effects
-- [ ] Audio Manager
-- [ ] Background music
-- [ ] Sound effects
+### Phase 5: Audio & Effects ✅
+- [x] Audio Manager (Web Audio API with synthetic sounds)
+- [x] Background music (safe/danger themes with crossfade)
+- [x] Sound effects (footsteps, attacks, pickups, zombie sounds)
 - [ ] Particle effects
 
-### Phase 6: Mobile & Polish
-- [ ] Touch controls (virtual joystick)
+### Phase 6: Mobile & Polish (Partial) ✅
+- [x] Touch controls (virtual joystick, action buttons)
 - [ ] Mobile optimizations
 - [ ] Performance tuning
 - [ ] Bug fixes and balancing
+
+### Bonus: Spectator Meerkats ✅
+- [x] SpectatorMeerkat entity (head tracking, idle animation)
+- [x] SpectatorMeerkatManager (spawning on hedge tops)
+- [x] Danger alert behavior (agitated movement when zombies near)
 
 ## Current Implementation Notes
 
@@ -55,8 +60,10 @@
 
 ### Input Manager
 - Keyboard support (WASD/Arrow keys for movement, Shift for sprint)
-- Touch support planned for mobile
-- Action buttons for attack and use power-ups
+- Touch support with virtual joystick and action buttons
+- Unified input: combines keyboard and touch seamlessly
+- Touch detection with dead zones (10% radius)
+- Action buttons for attack, sprint, and pause
 - Singleton pattern for global access
 
 ### Player Entity
@@ -125,3 +132,31 @@
 - **Level Complete Screen**: Stats, star rating, confetti celebration
 - **Leaderboard**: Top 10 scores with LocalStorage persistence, score calculation: (Level × 1000) + Survival Time
 - **UIManager**: Coordinates all UI components with game state transitions
+
+### Audio Manager
+- Web Audio API based audio system
+- Synthetic sounds using oscillators and noise generators (easily swappable for real audio files)
+- Two music themes: SAFE (calm exploration) and DANGER (tense chase)
+- Smooth crossfade between themes (configurable, default 2 seconds)
+- Sound effects: footsteps, sword swing, sword hit, zombie growl/death, powerup pickup, level complete, game over
+- Volume controls: master, music, SFX
+- Spatial audio support for zombie positions
+- Auto-switches music based on zombie proximity
+
+### Spectator Meerkats
+- Non-playable meerkats positioned on hedge wall tops
+- Head tracking: smoothly follows player position
+- Idle animation: subtle swaying/breathing motion
+- Danger alert system with 4 levels: CALM, CURIOUS, ALERT, ALARMED
+- Alert triggered when zombies within 2 cells of player
+- SpectatorMeerkatManager handles spawning (every 3-5 cells) and batch updates
+- Uses InstancedMesh for performance when many meerkats
+
+### Touch Controls
+- Virtual joystick: bottom-left, 100px radius, drag to move
+- Sprint button: bottom-right, press and hold
+- Attack button: above sprint, tap to attack
+- Pause button: top-right corner
+- Auto-shows on touch devices, hidden on desktop
+- Dead zone handling (10% radius) prevents accidental movement
+- Visual feedback on button presses

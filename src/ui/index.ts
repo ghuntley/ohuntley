@@ -22,3 +22,5 @@ export type { LeaderboardEntry, LeaderboardData } from './Leaderboard';
 
 export { UIManager } from './UIManager';
 export type { UIManagerCallbacks } from './UIManager';
+
+export { TouchControls } from './TouchControls';
