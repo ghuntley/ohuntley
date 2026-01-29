@@ -21,7 +21,7 @@ import {
 import { UIManager } from '../ui/UIManager';
 
 // Entities
-import { Player } from '../entities/Player';
+import { Player, PlayerState } from '../entities/Player';
 import { Zombie, ZombieState } from '../entities/Zombie';
 import { Sword } from '../entities/Sword';
 import { PowerUp, PowerUpType, PowerUpEffectManager } from '../entities/PowerUp';
@@ -442,6 +442,11 @@ export class Game {
           this.audioManager.stopMusic();
           this.audioManager.play(SoundEffect.LEVEL_COMPLETE);
           this.hapticManager.onLevelComplete();
+          // Play victory animation
+          if (this.playerModel) {
+            this.playerModel.playAnimation('victory');
+            this.lastPlayerAnimState = 'victory';
+          }
           this.saveProgress(); // Save progress on level complete
           this.uiManager.showLevelComplete({
             level: this.currentLevel,
@@ -576,6 +581,18 @@ export class Game {
           ParticleEffectType.ZOMBIE_HIT,
           new THREE.Vector3(zombiePos.x, 1, zombiePos.z)
         );
+
+        // Start death animation on the model
+        const model = this.zombieModels.get(zombie.getId());
+        if (model) {
+          model.playDeathAnimation(() => {
+            // Hide mesh when animation completes
+            const mesh = this.zombieMeshes.get(zombie.getId());
+            if (mesh) {
+              mesh.visible = false;
+            }
+          });
+        }
 
         zombie.die();
         this.zombiesKilledThisLevel++;
@@ -1292,6 +1309,7 @@ export class Game {
         remainingTime: effect.remainingTime,
         duration: effect.duration,
       })),
+      attackCooldownPercent: this.player.getAttackCooldownPercent(),
     });
 
     // Update debug overlay
@@ -1357,19 +1375,59 @@ export class Game {
     }
 
     // Update entity meshes
-    this.updateMeshes();
+    this.updateMeshes(deltaTime);
   }
 
+  // Track last player animation state for transitions
+  private lastPlayerAnimState: string = 'idle';
+
   /**
-   * Update 3D mesh positions and rotations
+   * Update 3D mesh positions, rotations, and animations
+   * @param deltaTime Time since last frame in seconds
    */
-  private updateMeshes(): void {
-    // Update player mesh
+  private updateMeshes(deltaTime: number): void {
+    // Update player mesh and animations
     if (this.playerMesh && this.playerModel) {
       const pos = this.player.getPosition();
       // Position at ground level (model is built from y=0)
       this.playerMesh.position.set(pos.x, 0, pos.z);
       this.playerMesh.rotation.y = this.player.getRotation();
+
+      // Update player animation based on state
+      const playerState = this.player.getState();
+      let targetAnim = 'idle';
+
+      switch (playerState) {
+        case PlayerState.WALKING:
+          targetAnim = 'walk';
+          break;
+        case PlayerState.SPRINTING:
+          targetAnim = 'run';
+          break;
+        case PlayerState.ATTACKING:
+          targetAnim = 'attack';
+          break;
+        case PlayerState.DEAD:
+          targetAnim = 'death';
+          break;
+        default:
+          targetAnim = 'idle';
+      }
+
+      // Only change animation if state changed
+      if (targetAnim !== this.lastPlayerAnimState) {
+        // Don't interrupt attack animation unless dead
+        const currentAnim = this.playerModel.getCurrentAnimation();
+        const isAttacking = currentAnim === 'attack' && this.playerModel.isAnimationPlaying('attack');
+
+        if (!isAttacking || targetAnim === 'death') {
+          this.playerModel.playAnimation(targetAnim);
+          this.lastPlayerAnimState = targetAnim;
+        }
+      }
+
+      // Update animation system
+      this.playerModel.update(deltaTime);
 
       // Visual feedback for invisibility
       if (this.powerUpEffects.getIsInvisible()) {
@@ -1391,8 +1449,21 @@ export class Game {
       const mesh = this.zombieMeshes.get(zombie.getId());
       const model = this.zombieModels.get(zombie.getId());
       if (mesh && model) {
+        // Handle death animation
         if (!zombie.isAlive()) {
-          mesh.visible = false;
+          // Update death animation if playing
+          if (model.isDeathAnimationPlaying()) {
+            model.update(deltaTime);
+            // Keep position but let animation affect scale/rotation
+            const pos = zombie.getPosition();
+            mesh.position.set(pos.x, 0, pos.z);
+          } else if (model.isDeathAnimationComplete()) {
+            // Hide mesh after death animation completes
+            mesh.visible = false;
+          } else {
+            // No death animation was triggered, hide immediately (fallback)
+            mesh.visible = false;
+          }
           return;
         }
 

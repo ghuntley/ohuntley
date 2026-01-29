@@ -1,9 +1,14 @@
 /**
  * ZombieModel - Creates a zombie meerkat model with glowing eyes
  * Based on the meerkat model but with undead appearance
+ * Supports death animation with dissolve effect
  */
 
 import * as THREE from 'three';
+import {
+  AnimationController,
+  ProceduralAnimations,
+} from '../systems/AnimationSystem';
 
 /** Configuration options for zombie model creation */
 export interface ZombieModelConfig {
@@ -31,12 +36,19 @@ export enum ZombieVisualState {
 /** Creates a zombie meerkat model for the game */
 export class ZombieModel {
   private group: THREE.Group;
+  private bodyGroup: THREE.Group;
   private materials: THREE.MeshStandardMaterial[];
   private eyeMaterials: THREE.MeshStandardMaterial[];
   private bodyMaterial: THREE.MeshStandardMaterial;
   private baseBodyColor: number;
   private eyeGlowColor: number;
   private eyeGlowIntensity: number;
+
+  // Death animation
+  private animationController: AnimationController | null = null;
+  private isDying: boolean = false;
+  private deathAnimationComplete: boolean = false;
+  private onDeathComplete: (() => void) | null = null;
 
   constructor(config: ZombieModelConfig = {}) {
     const {
@@ -49,6 +61,9 @@ export class ZombieModel {
     } = config;
 
     this.group = new THREE.Group();
+    this.bodyGroup = new THREE.Group();
+    this.group.add(this.bodyGroup);
+
     this.materials = [];
     this.eyeMaterials = [];
     this.baseBodyColor = bodyColor;
@@ -69,7 +84,7 @@ export class ZombieModel {
 
     this.materials.push(this.bodyMaterial, bellyMaterial);
 
-    // Build the zombie body parts
+    // Build the zombie body parts (into bodyGroup for animation)
     this.buildBody(this.bodyMaterial, bellyMaterial, castShadow);
     this.buildHead(this.bodyMaterial, bellyMaterial, castShadow);
     this.buildGlowingEyes(eyeGlowColor, eyeGlowIntensity);
@@ -80,6 +95,9 @@ export class ZombieModel {
 
     // Apply scale
     this.group.scale.setScalar(scale);
+
+    // Initialize animation controller for death animation
+    this.initializeAnimations();
   }
 
   /**
@@ -96,7 +114,7 @@ export class ZombieModel {
     body.position.set(0, 0.58, 0);
     body.rotation.x = 0.1; // Slight forward hunch
     body.castShadow = castShadow;
-    this.group.add(body);
+    this.bodyGroup.add(body);
 
     // Belly - decayed looking
     const bellyGeometry = new THREE.SphereGeometry(0.18, 16, 16, 0, Math.PI);
@@ -104,7 +122,7 @@ export class ZombieModel {
     belly.position.set(0, 0.48, 0.06);
     belly.scale.set(0.9, 1.1, 0.5);
     belly.rotation.x = -Math.PI / 2;
-    this.group.add(belly);
+    this.bodyGroup.add(belly);
   }
 
   /**
@@ -122,7 +140,7 @@ export class ZombieModel {
     head.scale.set(1.05, 1.0, 0.95);
     head.castShadow = castShadow;
     head.name = 'head';
-    this.group.add(head);
+    this.bodyGroup.add(head);
 
     // Snout - gaunt
     const snoutGeometry = new THREE.SphereGeometry(0.09, 12, 12);
@@ -134,7 +152,7 @@ export class ZombieModel {
     const snout = new THREE.Mesh(snoutGeometry, snoutMaterial);
     snout.position.set(0, 1.04, 0.18);
     snout.scale.set(0.8, 0.6, 1);
-    this.group.add(snout);
+    this.bodyGroup.add(snout);
 
     // Nose - dark, dead
     const noseGeometry = new THREE.SphereGeometry(0.035, 8, 8);
@@ -145,7 +163,7 @@ export class ZombieModel {
     this.materials.push(noseMaterial);
     const nose = new THREE.Mesh(noseGeometry, noseMaterial);
     nose.position.set(0, 1.04, 0.25);
-    this.group.add(nose);
+    this.bodyGroup.add(nose);
   }
 
   /**
@@ -162,11 +180,11 @@ export class ZombieModel {
 
     const leftSocket = new THREE.Mesh(socketGeometry, socketMaterial);
     leftSocket.position.set(-0.1, 1.13, 0.12);
-    this.group.add(leftSocket);
+    this.bodyGroup.add(leftSocket);
 
     const rightSocket = new THREE.Mesh(socketGeometry, socketMaterial);
     rightSocket.position.set(0.1, 1.13, 0.12);
-    this.group.add(rightSocket);
+    this.bodyGroup.add(rightSocket);
 
     // Glowing eyes - the spooky part!
     const eyeGeometry = new THREE.SphereGeometry(0.045, 12, 12);
@@ -183,24 +201,24 @@ export class ZombieModel {
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
     leftEye.position.set(-0.1, 1.14, 0.15);
     leftEye.name = 'leftEye';
-    this.group.add(leftEye);
+    this.bodyGroup.add(leftEye);
 
     // Right glowing eye
     const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
     rightEye.position.set(0.1, 1.14, 0.15);
     rightEye.name = 'rightEye';
-    this.group.add(rightEye);
+    this.bodyGroup.add(rightEye);
 
     // Add small point lights for actual glow effect (visible in fog)
     const leftEyeLight = new THREE.PointLight(glowColor, 0.3, 3);
     leftEyeLight.position.set(-0.1, 1.14, 0.18);
     leftEyeLight.name = 'leftEyeLight';
-    this.group.add(leftEyeLight);
+    this.bodyGroup.add(leftEyeLight);
 
     const rightEyeLight = new THREE.PointLight(glowColor, 0.3, 3);
     rightEyeLight.position.set(0.1, 1.14, 0.18);
     rightEyeLight.name = 'rightEyeLight';
-    this.group.add(rightEyeLight);
+    this.bodyGroup.add(rightEyeLight);
 
     // Inner eye glow (brighter center)
     const innerEyeGeometry = new THREE.SphereGeometry(0.02, 8, 8);
@@ -211,11 +229,11 @@ export class ZombieModel {
 
     const leftInnerEye = new THREE.Mesh(innerEyeGeometry, innerEyeMaterial);
     leftInnerEye.position.set(-0.1, 1.14, 0.17);
-    this.group.add(leftInnerEye);
+    this.bodyGroup.add(leftInnerEye);
 
     const rightInnerEye = new THREE.Mesh(innerEyeGeometry, innerEyeMaterial);
     rightInnerEye.position.set(0.1, 1.14, 0.17);
-    this.group.add(rightInnerEye);
+    this.bodyGroup.add(rightInnerEye);
   }
 
   /**
@@ -233,7 +251,7 @@ export class ZombieModel {
     leftArm.rotation.z = 0.4;
     leftArm.rotation.x = -0.5;
     leftArm.castShadow = castShadow;
-    this.group.add(leftArm);
+    this.bodyGroup.add(leftArm);
 
     // Right arm - reaching forward
     const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
@@ -241,7 +259,7 @@ export class ZombieModel {
     rightArm.rotation.z = -0.4;
     rightArm.rotation.x = -0.5;
     rightArm.castShadow = castShadow;
-    this.group.add(rightArm);
+    this.bodyGroup.add(rightArm);
 
     // Clawed hands
     const clawMaterial = new THREE.MeshStandardMaterial({
@@ -257,7 +275,7 @@ export class ZombieModel {
       const claw = new THREE.Mesh(clawGeometry, clawMaterial);
       claw.position.set(-0.32 + i * 0.02, 0.52, 0.18);
       claw.rotation.x = -Math.PI / 3;
-      this.group.add(claw);
+      this.bodyGroup.add(claw);
     }
 
     // Right hand claws
@@ -265,7 +283,7 @@ export class ZombieModel {
       const claw = new THREE.Mesh(clawGeometry, clawMaterial);
       claw.position.set(0.32 + i * 0.02, 0.52, 0.18);
       claw.rotation.x = -Math.PI / 3;
-      this.group.add(claw);
+      this.bodyGroup.add(claw);
     }
   }
 
@@ -283,14 +301,14 @@ export class ZombieModel {
     leftLeg.position.set(-0.1, 0.15, 0);
     leftLeg.rotation.z = 0.1;
     leftLeg.castShadow = castShadow;
-    this.group.add(leftLeg);
+    this.bodyGroup.add(leftLeg);
 
     // Right leg
     const rightLeg = new THREE.Mesh(legGeometry, bodyMaterial);
     rightLeg.position.set(0.12, 0.15, 0);
     rightLeg.rotation.z = -0.05;
     rightLeg.castShadow = castShadow;
-    this.group.add(rightLeg);
+    this.bodyGroup.add(rightLeg);
 
     // Feet
     const footGeometry = new THREE.SphereGeometry(0.065, 8, 8);
@@ -303,12 +321,12 @@ export class ZombieModel {
     const leftFoot = new THREE.Mesh(footGeometry, footMaterial);
     leftFoot.position.set(-0.12, 0.02, 0.02);
     leftFoot.scale.set(1, 0.5, 1.3);
-    this.group.add(leftFoot);
+    this.bodyGroup.add(leftFoot);
 
     const rightFoot = new THREE.Mesh(footGeometry, footMaterial);
     rightFoot.position.set(0.14, 0.02, 0.02);
     rightFoot.scale.set(1, 0.5, 1.3);
-    this.group.add(rightFoot);
+    this.bodyGroup.add(rightFoot);
   }
 
   /**
@@ -323,7 +341,7 @@ export class ZombieModel {
     tail.position.set(0, 0.32, -0.18);
     tail.rotation.x = Math.PI / 2.5;
     tail.castShadow = castShadow;
-    this.group.add(tail);
+    this.bodyGroup.add(tail);
   }
 
   /**
@@ -340,14 +358,14 @@ export class ZombieModel {
     leftEar.position.set(-0.14, 1.25, -0.02);
     leftEar.scale.set(0.6, 0.8, 0.4);
     leftEar.castShadow = castShadow;
-    this.group.add(leftEar);
+    this.bodyGroup.add(leftEar);
 
     // Right ear
     const rightEar = new THREE.Mesh(earGeometry, bodyMaterial);
     rightEar.position.set(0.14, 1.25, -0.02);
     rightEar.scale.set(0.6, 0.9, 0.4);
     rightEar.castShadow = castShadow;
-    this.group.add(rightEar);
+    this.bodyGroup.add(rightEar);
   }
 
   /**
@@ -431,9 +449,121 @@ export class ZombieModel {
   }
 
   /**
+   * Initialize animation controller with dissolve animation
+   */
+  private initializeAnimations(): void {
+    this.animationController = new AnimationController();
+
+    // Create dissolve death animation
+    const dissolveClip = ProceduralAnimations.createDissolveAnimation(this.bodyGroup);
+    this.animationController.addClip(dissolveClip);
+  }
+
+  /**
+   * Update the model (call each frame for animations)
+   * @param deltaTime Time since last frame in seconds
+   */
+  update(deltaTime: number): void {
+    if (this.animationController && this.isDying) {
+      this.animationController.update(deltaTime);
+
+      // Also fade out eye lights during death
+      if (this.isDying && !this.deathAnimationComplete) {
+        const leftLight = this.bodyGroup.getObjectByName('leftEyeLight') as THREE.PointLight;
+        const rightLight = this.bodyGroup.getObjectByName('rightEyeLight') as THREE.PointLight;
+        if (leftLight) {
+          leftLight.intensity = Math.max(0, leftLight.intensity - deltaTime * 0.5);
+        }
+        if (rightLight) {
+          rightLight.intensity = Math.max(0, rightLight.intensity - deltaTime * 0.5);
+        }
+
+        // Fade out materials
+        this.materials.forEach((mat) => {
+          if (mat.transparent === false) {
+            mat.transparent = true;
+          }
+          mat.opacity = Math.max(0, mat.opacity - deltaTime * 1.5);
+        });
+      }
+    }
+  }
+
+  /**
+   * Start the death animation
+   * @param onComplete Callback when animation finishes
+   */
+  playDeathAnimation(onComplete?: () => void): void {
+    if (this.isDying) return;
+
+    this.isDying = true;
+    this.onDeathComplete = onComplete ?? null;
+
+    // Make all materials support transparency for fade out
+    this.materials.forEach((mat) => {
+      mat.transparent = true;
+      mat.opacity = 1;
+    });
+
+    if (this.animationController) {
+      this.animationController.play('dissolve', {
+        onComplete: () => {
+          this.deathAnimationComplete = true;
+          this.onDeathComplete?.();
+        },
+      });
+    }
+  }
+
+  /**
+   * Check if death animation is playing
+   */
+  isDeathAnimationPlaying(): boolean {
+    return this.isDying && !this.deathAnimationComplete;
+  }
+
+  /**
+   * Check if death animation has completed
+   */
+  isDeathAnimationComplete(): boolean {
+    return this.deathAnimationComplete;
+  }
+
+  /**
+   * Reset death animation state (for reuse/pooling)
+   */
+  resetDeathState(): void {
+    this.isDying = false;
+    this.deathAnimationComplete = false;
+    this.onDeathComplete = null;
+
+    // Reset body group transform
+    this.bodyGroup.position.set(0, 0, 0);
+    this.bodyGroup.scale.set(1, 1, 1);
+    this.bodyGroup.rotation.set(0, 0, 0);
+
+    // Reset materials opacity
+    this.materials.forEach((mat) => {
+      mat.transparent = false;
+      mat.opacity = 1;
+    });
+
+    // Reset eye lights
+    const leftLight = this.bodyGroup.getObjectByName('leftEyeLight') as THREE.PointLight;
+    const rightLight = this.bodyGroup.getObjectByName('rightEyeLight') as THREE.PointLight;
+    if (leftLight) leftLight.intensity = 0.3;
+    if (rightLight) rightLight.intensity = 0.3;
+  }
+
+  /**
    * Dispose of all geometries and materials
    */
   dispose(): void {
+    // Dispose animation controller
+    if (this.animationController) {
+      this.animationController.dispose();
+    }
+
     this.group.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.geometry.dispose();

@@ -1,9 +1,14 @@
 /**
  * MeerkatModel - Creates a stylized 3D meerkat model using Three.js primitives
  * Used for the player character and can be adapted for spectator meerkats
+ * Supports procedural animations via stored limb references
  */
 
 import * as THREE from 'three';
+import {
+  AnimationController,
+  ProceduralAnimations,
+} from '../systems/AnimationSystem';
 
 /** Configuration options for meerkat model creation */
 export interface MeerkatModelConfig {
@@ -21,12 +26,33 @@ export interface MeerkatModelConfig {
   castShadow?: boolean;
   /** Whether to receive shadows (default: false) */
   receiveShadow?: boolean;
+  /** Whether to enable animations (default: true) */
+  enableAnimations?: boolean;
+}
+
+/** Animatable body parts */
+export interface AnimatableParts {
+  body: THREE.Group;
+  head: THREE.Mesh;
+  leftArm: THREE.Mesh;
+  rightArm: THREE.Mesh;
+  leftLeg: THREE.Mesh;
+  rightLeg: THREE.Mesh;
+  tail: THREE.Mesh;
 }
 
 /** Creates a stylized meerkat model for use in the game */
 export class MeerkatModel {
   private group: THREE.Group;
   private materials: THREE.MeshStandardMaterial[];
+
+  // Animatable parts stored for animation system
+  private parts: Partial<AnimatableParts> = {};
+  private bodyGroup: THREE.Group;
+
+  // Animation controller
+  private animationController: AnimationController | null = null;
+  private animationsEnabled: boolean;
 
   constructor(config: MeerkatModelConfig = {}) {
     const {
@@ -37,10 +63,17 @@ export class MeerkatModel {
       scale = 1,
       castShadow = true,
       receiveShadow = false,
+      enableAnimations = true,
     } = config;
 
     this.group = new THREE.Group();
+    this.bodyGroup = new THREE.Group();
     this.materials = [];
+    this.animationsEnabled = enableAnimations;
+
+    // Add body group to main group (allows animating all body parts together)
+    this.group.add(this.bodyGroup);
+    this.parts.body = this.bodyGroup;
 
     // Create materials
     const bodyMaterial = new THREE.MeshStandardMaterial({
@@ -72,6 +105,11 @@ export class MeerkatModel {
 
     // Apply scale
     this.group.scale.setScalar(scale);
+
+    // Initialize animations if enabled
+    if (enableAnimations) {
+      this.initializeAnimations();
+    }
   }
 
   /**
@@ -89,7 +127,8 @@ export class MeerkatModel {
     body.position.set(0, 0.6, 0);
     body.castShadow = castShadow;
     body.receiveShadow = receiveShadow;
-    this.group.add(body);
+    body.name = 'torso';
+    this.bodyGroup.add(body);
 
     // Belly - front patch (lighter color)
     const bellyGeometry = new THREE.SphereGeometry(0.2, 16, 16, 0, Math.PI);
@@ -98,7 +137,7 @@ export class MeerkatModel {
     belly.scale.set(0.9, 1.2, 0.5);
     belly.rotation.x = -Math.PI / 2;
     belly.castShadow = false;
-    this.group.add(belly);
+    this.bodyGroup.add(belly);
   }
 
   /**
@@ -120,7 +159,8 @@ export class MeerkatModel {
     head.castShadow = castShadow;
     head.receiveShadow = receiveShadow;
     head.name = 'head';
-    this.group.add(head);
+    this.bodyGroup.add(head);
+    this.parts.head = head;
 
     // Snout - pointed forward
     const snoutGeometry = new THREE.SphereGeometry(0.1, 12, 12);
@@ -128,14 +168,14 @@ export class MeerkatModel {
     snout.position.set(0, 1.08, 0.18);
     snout.scale.set(0.8, 0.7, 1);
     snout.castShadow = false;
-    this.group.add(snout);
+    this.bodyGroup.add(snout);
 
     // Nose
     const noseGeometry = new THREE.SphereGeometry(0.04, 8, 8);
     const nose = new THREE.Mesh(noseGeometry, noseMaterial);
     nose.position.set(0, 1.08, 0.26);
     nose.castShadow = false;
-    this.group.add(nose);
+    this.bodyGroup.add(nose);
 
     // Eyes
     const eyeGeometry = new THREE.SphereGeometry(0.04, 8, 8);
@@ -144,13 +184,13 @@ export class MeerkatModel {
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
     leftEye.position.set(-0.1, 1.18, 0.16);
     leftEye.castShadow = false;
-    this.group.add(leftEye);
+    this.bodyGroup.add(leftEye);
 
     // Right eye
     const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
     rightEye.position.set(0.1, 1.18, 0.16);
     rightEye.castShadow = false;
-    this.group.add(rightEye);
+    this.bodyGroup.add(rightEye);
 
     // Eye whites/highlights
     const highlightGeometry = new THREE.SphereGeometry(0.015, 6, 6);
@@ -159,11 +199,11 @@ export class MeerkatModel {
 
     const leftHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
     leftHighlight.position.set(-0.085, 1.195, 0.18);
-    this.group.add(leftHighlight);
+    this.bodyGroup.add(leftHighlight);
 
     const rightHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
     rightHighlight.position.set(0.115, 1.195, 0.18);
-    this.group.add(rightHighlight);
+    this.bodyGroup.add(rightHighlight);
 
     // Dark eye patches (meerkat markings)
     const patchGeometry = new THREE.SphereGeometry(0.06, 8, 8);
@@ -176,12 +216,12 @@ export class MeerkatModel {
     const leftPatch = new THREE.Mesh(patchGeometry, patchMaterial);
     leftPatch.position.set(-0.1, 1.18, 0.12);
     leftPatch.scale.set(1, 1.3, 0.5);
-    this.group.add(leftPatch);
+    this.bodyGroup.add(leftPatch);
 
     const rightPatch = new THREE.Mesh(patchGeometry, patchMaterial);
     rightPatch.position.set(0.1, 1.18, 0.12);
     rightPatch.scale.set(1, 1.3, 0.5);
-    this.group.add(rightPatch);
+    this.bodyGroup.add(rightPatch);
   }
 
   /**
@@ -194,25 +234,40 @@ export class MeerkatModel {
   ): void {
     const armGeometry = new THREE.CapsuleGeometry(0.06, 0.2, 4, 8);
 
-    // Left arm
+    // Left arm - use a group for proper pivot point
+    const leftArmGroup = new THREE.Group();
+    leftArmGroup.position.set(-0.22, 0.85, 0.05); // Pivot at shoulder
     const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
-    leftArm.position.set(-0.22, 0.7, 0.05);
-    leftArm.rotation.z = 0.3;
-    leftArm.rotation.x = -0.2;
+    leftArm.position.set(0, -0.15, 0); // Offset from pivot
     leftArm.castShadow = castShadow;
     leftArm.receiveShadow = receiveShadow;
-    this.group.add(leftArm);
+    leftArm.name = 'leftArm';
+    leftArmGroup.add(leftArm);
+    leftArmGroup.rotation.z = 0.3;
+    leftArmGroup.rotation.x = -0.2;
+    this.bodyGroup.add(leftArmGroup);
+    this.parts.leftArm = leftArm;
 
     // Right arm
+    const rightArmGroup = new THREE.Group();
+    rightArmGroup.position.set(0.22, 0.85, 0.05); // Pivot at shoulder
     const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
-    rightArm.position.set(0.22, 0.7, 0.05);
-    rightArm.rotation.z = -0.3;
-    rightArm.rotation.x = -0.2;
+    rightArm.position.set(0, -0.15, 0); // Offset from pivot
     rightArm.castShadow = castShadow;
     rightArm.receiveShadow = receiveShadow;
-    this.group.add(rightArm);
+    rightArm.name = 'rightArm';
+    rightArmGroup.add(rightArm);
+    rightArmGroup.rotation.z = -0.3;
+    rightArmGroup.rotation.x = -0.2;
+    this.bodyGroup.add(rightArmGroup);
+    this.parts.rightArm = rightArm;
 
-    // Paws/hands (small spheres)
+    // Store the groups as the animatable parts (we animate the groups, not the meshes)
+    // Override with groups for animation
+    (this.parts as Record<string, THREE.Object3D>).leftArm = leftArmGroup;
+    (this.parts as Record<string, THREE.Object3D>).rightArm = rightArmGroup;
+
+    // Paws/hands (small spheres) - attached to arm groups
     const pawGeometry = new THREE.SphereGeometry(0.05, 8, 8);
     const pawMaterial = new THREE.MeshStandardMaterial({
       color: 0x8b4513,
@@ -221,12 +276,12 @@ export class MeerkatModel {
     this.materials.push(pawMaterial);
 
     const leftPaw = new THREE.Mesh(pawGeometry, pawMaterial);
-    leftPaw.position.set(-0.28, 0.55, 0.08);
-    this.group.add(leftPaw);
+    leftPaw.position.set(0, -0.3, 0.03);
+    leftArmGroup.add(leftPaw);
 
     const rightPaw = new THREE.Mesh(pawGeometry, pawMaterial);
-    rightPaw.position.set(0.28, 0.55, 0.08);
-    this.group.add(rightPaw);
+    rightPaw.position.set(0, -0.3, 0.03);
+    rightArmGroup.add(rightPaw);
   }
 
   /**
@@ -239,21 +294,31 @@ export class MeerkatModel {
   ): void {
     const legGeometry = new THREE.CapsuleGeometry(0.08, 0.15, 4, 8);
 
-    // Left leg
+    // Left leg - use a group for proper pivot point
+    const leftLegGroup = new THREE.Group();
+    leftLegGroup.position.set(-0.12, 0.25, 0); // Pivot at hip
     const leftLeg = new THREE.Mesh(legGeometry, bodyMaterial);
-    leftLeg.position.set(-0.12, 0.15, 0);
+    leftLeg.position.set(0, -0.1, 0); // Offset from pivot
     leftLeg.castShadow = castShadow;
     leftLeg.receiveShadow = receiveShadow;
-    this.group.add(leftLeg);
+    leftLeg.name = 'leftLeg';
+    leftLegGroup.add(leftLeg);
+    this.bodyGroup.add(leftLegGroup);
+    (this.parts as Record<string, THREE.Object3D>).leftLeg = leftLegGroup;
 
     // Right leg
+    const rightLegGroup = new THREE.Group();
+    rightLegGroup.position.set(0.12, 0.25, 0); // Pivot at hip
     const rightLeg = new THREE.Mesh(legGeometry, bodyMaterial);
-    rightLeg.position.set(0.12, 0.15, 0);
+    rightLeg.position.set(0, -0.1, 0); // Offset from pivot
     rightLeg.castShadow = castShadow;
     rightLeg.receiveShadow = receiveShadow;
-    this.group.add(rightLeg);
+    rightLeg.name = 'rightLeg';
+    rightLegGroup.add(rightLeg);
+    this.bodyGroup.add(rightLegGroup);
+    (this.parts as Record<string, THREE.Object3D>).rightLeg = rightLegGroup;
 
-    // Feet
+    // Feet - attached to leg groups
     const footGeometry = new THREE.SphereGeometry(0.07, 8, 8);
     const footMaterial = new THREE.MeshStandardMaterial({
       color: 0x8b4513,
@@ -262,14 +327,14 @@ export class MeerkatModel {
     this.materials.push(footMaterial);
 
     const leftFoot = new THREE.Mesh(footGeometry, footMaterial);
-    leftFoot.position.set(-0.12, 0.02, 0.02);
+    leftFoot.position.set(0, -0.23, 0.02);
     leftFoot.scale.set(1, 0.5, 1.3);
-    this.group.add(leftFoot);
+    leftLegGroup.add(leftFoot);
 
     const rightFoot = new THREE.Mesh(footGeometry, footMaterial);
-    rightFoot.position.set(0.12, 0.02, 0.02);
+    rightFoot.position.set(0, -0.23, 0.02);
     rightFoot.scale.set(1, 0.5, 1.3);
-    this.group.add(rightFoot);
+    rightLegGroup.add(rightFoot);
   }
 
   /**
@@ -280,14 +345,19 @@ export class MeerkatModel {
     castShadow: boolean,
     receiveShadow: boolean
   ): void {
+    // Tail group for animation
+    const tailGroup = new THREE.Group();
+    tailGroup.position.set(0, 0.35, -0.15); // Pivot at base
+
     // Tail - tapered, extends back and down slightly
     const tailGeometry = new THREE.ConeGeometry(0.06, 0.4, 8);
     const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
-    tail.position.set(0, 0.35, -0.2);
+    tail.position.set(0, 0, -0.1);
     tail.rotation.x = Math.PI / 3; // Angled back
     tail.castShadow = castShadow;
     tail.receiveShadow = receiveShadow;
-    this.group.add(tail);
+    tail.name = 'tail';
+    tailGroup.add(tail);
 
     // Tail tip (darker)
     const tipGeometry = new THREE.SphereGeometry(0.04, 8, 8);
@@ -298,8 +368,11 @@ export class MeerkatModel {
     this.materials.push(tipMaterial);
 
     const tailTip = new THREE.Mesh(tipGeometry, tipMaterial);
-    tailTip.position.set(0, 0.18, -0.35);
-    this.group.add(tailTip);
+    tailTip.position.set(0, -0.17, -0.2);
+    tailGroup.add(tailTip);
+
+    this.bodyGroup.add(tailGroup);
+    (this.parts as Record<string, THREE.Object3D>).tail = tailGroup;
   }
 
   /**
@@ -318,7 +391,7 @@ export class MeerkatModel {
     leftEar.scale.set(0.7, 1, 0.5);
     leftEar.castShadow = castShadow;
     leftEar.receiveShadow = receiveShadow;
-    this.group.add(leftEar);
+    this.bodyGroup.add(leftEar);
 
     // Right ear
     const rightEar = new THREE.Mesh(earGeometry, bodyMaterial);
@@ -326,7 +399,7 @@ export class MeerkatModel {
     rightEar.scale.set(0.7, 1, 0.5);
     rightEar.castShadow = castShadow;
     rightEar.receiveShadow = receiveShadow;
-    this.group.add(rightEar);
+    this.bodyGroup.add(rightEar);
 
     // Inner ears (pink)
     const innerEarGeometry = new THREE.SphereGeometry(0.03, 6, 6);
@@ -338,11 +411,11 @@ export class MeerkatModel {
 
     const leftInnerEar = new THREE.Mesh(innerEarGeometry, innerEarMaterial);
     leftInnerEar.position.set(-0.15, 1.3, 0.01);
-    this.group.add(leftInnerEar);
+    this.bodyGroup.add(leftInnerEar);
 
     const rightInnerEar = new THREE.Mesh(innerEarGeometry, innerEarMaterial);
     rightInnerEar.position.set(0.15, 1.3, 0.01);
-    this.group.add(rightInnerEar);
+    this.bodyGroup.add(rightInnerEar);
   }
 
   /**
@@ -387,9 +460,151 @@ export class MeerkatModel {
   }
 
   /**
+   * Initialize animation clips
+   */
+  private initializeAnimations(): void {
+    if (!this.parts.leftArm || !this.parts.rightArm || !this.parts.leftLeg || !this.parts.rightLeg) {
+      console.warn('MeerkatModel: Cannot initialize animations, parts not found');
+      return;
+    }
+
+    this.animationController = new AnimationController();
+
+    // Create and register animation clips
+    const idleClip = ProceduralAnimations.createIdleAnimation(
+      this.bodyGroup,
+      this.parts.head
+    );
+    this.animationController.addClip(idleClip);
+
+    const walkClip = ProceduralAnimations.createWalkCycle(
+      this.parts.leftArm as THREE.Object3D,
+      this.parts.rightArm as THREE.Object3D,
+      this.parts.leftLeg as THREE.Object3D,
+      this.parts.rightLeg as THREE.Object3D,
+      this.bodyGroup
+    );
+    this.animationController.addClip(walkClip);
+
+    const runClip = ProceduralAnimations.createRunCycle(
+      this.parts.leftArm as THREE.Object3D,
+      this.parts.rightArm as THREE.Object3D,
+      this.parts.leftLeg as THREE.Object3D,
+      this.parts.rightLeg as THREE.Object3D,
+      this.bodyGroup
+    );
+    this.animationController.addClip(runClip);
+
+    const attackClip = ProceduralAnimations.createAttackAnimation(
+      this.parts.rightArm as THREE.Object3D,
+      this.bodyGroup
+    );
+    this.animationController.addClip(attackClip);
+
+    const deathClip = ProceduralAnimations.createDeathAnimation(this.bodyGroup);
+    this.animationController.addClip(deathClip);
+
+    const victoryClip = ProceduralAnimations.createVictoryAnimation(
+      this.parts.leftArm as THREE.Object3D,
+      this.parts.rightArm as THREE.Object3D,
+      this.bodyGroup
+    );
+    this.animationController.addClip(victoryClip);
+
+    // Start with idle animation
+    this.animationController.play('idle');
+  }
+
+  /**
+   * Update animations
+   * @param deltaTime Time since last frame in seconds
+   */
+  update(deltaTime: number): void {
+    if (this.animationController && this.animationsEnabled) {
+      this.animationController.update(deltaTime);
+    }
+  }
+
+  /**
+   * Play an animation by name
+   * @param name Animation name: 'idle', 'walk', 'run', 'attack', 'death', 'victory'
+   * @param options Optional configuration
+   */
+  playAnimation(name: string, options?: { speed?: number; onComplete?: () => void }): void {
+    if (this.animationController && this.animationsEnabled) {
+      this.animationController.play(name, options);
+    }
+  }
+
+  /**
+   * Stop current animation
+   */
+  stopAnimation(): void {
+    if (this.animationController) {
+      this.animationController.stop();
+    }
+  }
+
+  /**
+   * Check if an animation is currently playing
+   */
+  isAnimationPlaying(name?: string): boolean {
+    return this.animationController?.isPlaying(name) ?? false;
+  }
+
+  /**
+   * Get current animation name
+   */
+  getCurrentAnimation(): string | null {
+    return this.animationController?.getCurrentAnimation() ?? null;
+  }
+
+  /**
+   * Get animatable parts for external animation
+   */
+  getParts(): Partial<AnimatableParts> {
+    return this.parts;
+  }
+
+  /**
+   * Get the body group (for position/rotation animation)
+   */
+  getBodyGroup(): THREE.Group {
+    return this.bodyGroup;
+  }
+
+  /**
+   * Reset the model to default pose
+   */
+  resetPose(): void {
+    this.bodyGroup.position.set(0, 0, 0);
+    this.bodyGroup.rotation.set(0, 0, 0);
+    this.bodyGroup.scale.set(1, 1, 1);
+
+    // Reset limb rotations
+    if (this.parts.leftArm) {
+      (this.parts.leftArm as THREE.Object3D).rotation.set(-0.2, 0, 0.3);
+    }
+    if (this.parts.rightArm) {
+      (this.parts.rightArm as THREE.Object3D).rotation.set(-0.2, 0, -0.3);
+    }
+    if (this.parts.leftLeg) {
+      (this.parts.leftLeg as THREE.Object3D).rotation.set(0, 0, 0);
+    }
+    if (this.parts.rightLeg) {
+      (this.parts.rightLeg as THREE.Object3D).rotation.set(0, 0, 0);
+    }
+  }
+
+  /**
    * Dispose of all geometries and materials
    */
   dispose(): void {
+    // Dispose animation controller
+    if (this.animationController) {
+      this.animationController.dispose();
+    }
+
     this.group.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.geometry.dispose();
@@ -404,6 +619,7 @@ export class MeerkatModel {
 
 /**
  * Create a zombie meerkat model with undead appearance
+ * Note: Zombies typically don't need complex animations, so we disable them by default
  */
 export function createZombieMeerkatModel(config: Partial<MeerkatModelConfig> = {}): MeerkatModel {
   return new MeerkatModel({
@@ -411,17 +627,31 @@ export function createZombieMeerkatModel(config: Partial<MeerkatModelConfig> = {
     bellyColor: 0x6b7b6b, // Pale green
     eyeColor: 0xff0000, // Red eyes (will be replaced with glowing)
     noseColor: 0x3d3d3d, // Dark gray
+    enableAnimations: false, // Zombies use ZombieModel instead
     ...config,
   });
 }
 
 /**
- * Create a player meerkat model
+ * Create a player meerkat model with full animation support
  */
 export function createPlayerMeerkatModel(config: Partial<MeerkatModelConfig> = {}): MeerkatModel {
   return new MeerkatModel({
     bodyColor: 0xd2691e, // Chocolate brown
     bellyColor: 0xf5deb3, // Wheat
+    enableAnimations: true,
+    ...config,
+  });
+}
+
+/**
+ * Create a spectator meerkat model (no animations needed - has its own animation)
+ */
+export function createSpectatorMeerkatModel(config: Partial<MeerkatModelConfig> = {}): MeerkatModel {
+  return new MeerkatModel({
+    bodyColor: 0xd2691e,
+    bellyColor: 0xf5deb3,
+    enableAnimations: false, // Spectators have their own head-tracking animation
     ...config,
   });
 }

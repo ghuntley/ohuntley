@@ -13,6 +13,8 @@ export interface HUDData {
   hasSword: boolean;
   hasShield: boolean;
   activeEffects: Array<{ type: string; remainingTime: number; duration: number }>;
+  /** Attack cooldown percentage (0 = ready, 1 = just attacked) */
+  attackCooldownPercent?: number;
 }
 
 /** Timer state for visual feedback */
@@ -35,11 +37,16 @@ export class HUD {
   private sprintGauge: HTMLDivElement | null = null;
   private sprintFill: HTMLDivElement | null = null;
   private swordIndicator: HTMLDivElement | null = null;
+  private swordCooldownFill: HTMLDivElement | null = null;
   private powerUpsContainer: HTMLDivElement | null = null;
 
   // Timer state tracking
   private currentTimerState: TimerState = TimerState.NORMAL;
   private pulseAnimationId: number | null = null;
+
+  // Attack cooldown tracking
+  private lastCooldownPercent: number = 0;
+  private wasOnCooldown: boolean = false;
 
   constructor() {
     this.createStyles();
@@ -224,6 +231,46 @@ export class HUD {
         50% { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 25px rgba(255, 215, 0, 0.8), inset 0 2px 0 rgba(255, 255, 255, 0.3); }
       }
 
+      /* Attack Cooldown Overlay */
+      .hud-sword-cooldown {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 15px;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .hud-sword-cooldown-fill {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        transition: height 0.05s linear;
+      }
+
+      .hud-sword.active.on-cooldown {
+        animation: none;
+        filter: brightness(0.7);
+      }
+
+      .hud-sword.active.on-cooldown .hud-sword-cooldown-fill {
+        background: linear-gradient(180deg, rgba(100, 100, 100, 0.7) 0%, rgba(50, 50, 50, 0.8) 100%);
+      }
+
+      /* Cooldown ready flash */
+      .hud-sword.cooldown-ready {
+        animation: cooldown-ready-flash 0.3s ease-out;
+      }
+
+      @keyframes cooldown-ready-flash {
+        0% { filter: brightness(1.5); }
+        100% { filter: brightness(1); }
+      }
+
       /* Power-ups Container - Top Right */
       .hud-powerups {
         position: absolute;
@@ -390,10 +437,24 @@ export class HUD {
     shieldIndicator.innerHTML = '&#x1F6E1;'; // Shield emoji
     this.container.appendChild(shieldIndicator);
 
-    // Create sword indicator
+    // Create sword indicator with cooldown overlay
     this.swordIndicator = document.createElement('div');
     this.swordIndicator.className = 'hud-sword inactive';
-    this.swordIndicator.innerHTML = '&#x2694;'; // Crossed swords emoji
+
+    // Sword icon
+    const swordIcon = document.createElement('span');
+    swordIcon.innerHTML = '&#x2694;'; // Crossed swords emoji
+    this.swordIndicator.appendChild(swordIcon);
+
+    // Cooldown overlay
+    const cooldownOverlay = document.createElement('div');
+    cooldownOverlay.className = 'hud-sword-cooldown';
+    this.swordCooldownFill = document.createElement('div');
+    this.swordCooldownFill.className = 'hud-sword-cooldown-fill';
+    this.swordCooldownFill.style.height = '0%';
+    cooldownOverlay.appendChild(this.swordCooldownFill);
+    this.swordIndicator.appendChild(cooldownOverlay);
+
     this.container.appendChild(this.swordIndicator);
 
     // Append to body
@@ -411,6 +472,7 @@ export class HUD {
     this.sprintGauge = this.container.querySelector('.hud-sprint');
     this.sprintFill = this.container.querySelector('.hud-sprint-fill');
     this.swordIndicator = this.container.querySelector('.hud-sword');
+    this.swordCooldownFill = this.container.querySelector('.hud-sword-cooldown-fill');
     this.powerUpsContainer = this.container.querySelector('.hud-powerups');
   }
 
@@ -501,6 +563,44 @@ export class HUD {
 
     this.swordIndicator.classList.remove('active', 'inactive');
     this.swordIndicator.classList.add(hasSword ? 'active' : 'inactive');
+  }
+
+  /**
+   * Update attack cooldown indicator
+   * @param cooldownPercent 0 = ready, 1 = just attacked/full cooldown
+   */
+  private updateSwordCooldown(cooldownPercent: number): void {
+    if (!this.swordIndicator || !this.swordCooldownFill) return;
+
+    // Clamp value
+    const percent = Math.max(0, Math.min(1, cooldownPercent));
+
+    // Update cooldown fill height (inverted: 100% height = on cooldown)
+    this.swordCooldownFill.style.height = `${percent * 100}%`;
+
+    // Track cooldown state for visual feedback
+    const isOnCooldown = percent > 0;
+
+    if (isOnCooldown !== this.wasOnCooldown) {
+      if (isOnCooldown) {
+        // Started cooldown
+        this.swordIndicator.classList.add('on-cooldown');
+        this.swordIndicator.classList.remove('cooldown-ready');
+      } else {
+        // Cooldown ended - flash ready
+        this.swordIndicator.classList.remove('on-cooldown');
+        this.swordIndicator.classList.add('cooldown-ready');
+        // Remove flash class after animation
+        setTimeout(() => {
+          if (this.swordIndicator) {
+            this.swordIndicator.classList.remove('cooldown-ready');
+          }
+        }, 300);
+      }
+      this.wasOnCooldown = isOnCooldown;
+    }
+
+    this.lastCooldownPercent = percent;
   }
 
   /**
@@ -605,6 +705,11 @@ export class HUD {
     this.updateSwordIndicator(gameData.hasSword);
     this.updateShieldIndicator(gameData.hasShield);
     this.updatePowerUps(gameData.activeEffects);
+
+    // Update attack cooldown if provided
+    if (gameData.attackCooldownPercent !== undefined) {
+      this.updateSwordCooldown(gameData.attackCooldownPercent);
+    }
   }
 
   /**
@@ -666,7 +771,10 @@ export class HUD {
     this.sprintGauge = null;
     this.sprintFill = null;
     this.swordIndicator = null;
+    this.swordCooldownFill = null;
     this.powerUpsContainer = null;
     this.isVisible = false;
+    this.wasOnCooldown = false;
+    this.lastCooldownPercent = 0;
   }
 }

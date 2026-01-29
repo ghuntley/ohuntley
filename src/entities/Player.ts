@@ -299,6 +299,21 @@ export class Player {
     return length;
   }
 
+  /**
+   * Get attack cooldown as percentage (0 = ready, 1 = just attacked)
+   */
+  getAttackCooldownPercent(): number {
+    if (this.attackCooldown <= 0) return 0;
+    return Math.max(0, Math.min(1, this.attackCooldownTimer / this.attackCooldown));
+  }
+
+  /**
+   * Check if attack is on cooldown
+   */
+  isAttackOnCooldown(): boolean {
+    return this.attackCooldownTimer > 0;
+  }
+
   // Setters
 
   setPosition(position: Position): void {

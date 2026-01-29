@@ -84,6 +84,15 @@
 - [x] Zombie visual state system (normal, chasing, frozen) with distinct appearances
 - [x] Player and zombie models positioned correctly at ground level
 
+### Phase 11: Animation System & UI Polish ✅
+- [x] AnimationSystem for procedural entity animations (keyframe interpolation, easing, blending)
+- [x] Player procedural animations (idle, walk, run, attack, death, victory)
+- [x] MeerkatModel refactored with animatable limb groups
+- [x] Zombie death animation (dissolve effect with scale/fade/spin)
+- [x] ZombieModel refactored with bodyGroup for animation support
+- [x] Attack cooldown UI indicator (visual overlay on sword icon)
+- [x] Level complete stats already functional (zombies killed, power-ups collected)
+
 ## Current Implementation Notes
 
 ### Maze Generator
@@ -319,3 +328,32 @@
 - Visual states: NORMAL, CHASING (intense red glow), FROZEN (ice blue)
 - Body has undead aesthetic: sickly green, claws, hunched posture
 - Point lights attached to eyes illuminate nearby area through fog
+- Death animation: dissolve effect (shrink, fade, spin, sink)
+
+### Animation System
+- AnimationController class manages procedural animations per entity
+- Support for keyframe-based animations with multiple easing functions
+- EaseType options: LINEAR, EASE_IN, EASE_OUT, EASE_IN_OUT, BOUNCE, ELASTIC
+- Animation blending between states (configurable blend time)
+- ProceduralAnimations helper with pre-built animation clips:
+  - createWalkCycle: coordinated arm/leg swing with body bob
+  - createRunCycle: faster, more pronounced motion
+  - createIdleAnimation: breathing and subtle sway
+  - createAttackAnimation: wind-up and swing motion
+  - createDeathAnimation: fall forward collapse
+  - createVictoryAnimation: arms up with jump celebration
+  - createDissolveAnimation: shrink/spin/fade death effect
+
+### Meerkat Animation Integration
+- MeerkatModel stores references to animatable body part groups
+- Limbs use pivot groups for proper rotation (shoulder/hip joints)
+- Animation clips registered on construction
+- playAnimation(name) triggers state-based animation changes
+- update(deltaTime) advances animation each frame
+- State tracking prevents animation interruption during attacks
+
+### Attack Cooldown UI
+- HUD displays cooldown overlay on sword indicator
+- Visual fill shows cooldown progress (100% = on cooldown)
+- Flash animation when cooldown completes (ready to attack)
+- Grayed out appearance during cooldown period
