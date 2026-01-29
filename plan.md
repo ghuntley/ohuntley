@@ -20,11 +20,11 @@
 - [x] Collision System (player-wall, player-zombie)
 - [x] Camera Follow System (third-person follow camera)
 
-### Phase 3: Enemies & Combat
-- [ ] Zombie Entity (patrol and chase states)
-- [ ] Pathfinding System (A* for zombie navigation)
-- [ ] Combat System (sword attacks)
-- [ ] Power-ups (speed boost, shield, etc.)
+### Phase 3: Enemies & Combat ✅
+- [x] Zombie Entity (patrol and chase states)
+- [x] Pathfinding System (A* for zombie navigation)
+- [x] Combat System (sword attacks)
+- [x] Power-ups (speed boost, shield, etc.)
 
 ### Phase 4: UI & Polish
 - [ ] HUD (timer, sprint gauge, level indicator)
@@ -85,3 +85,34 @@
 - Configurable distance, height, angle, and follow speed
 - Snap-to-target for instant positioning
 - Frustum-based visibility checks
+
+### A* Pathfinding System
+- Grid-based A* implementation for maze navigation
+- Uses MazeGenerator's accessible neighbors
+- Efficient path recalculation for moving targets
+- Support for path length queries and next-step retrieval
+
+### Zombie Entity
+- State machine: PATROL, CHASE, RETURNING, FROZEN, DEAD
+- Detection radius with line-of-sight approximation
+- Uses pathfinding for navigation
+- Periodic path recalculation during chase
+- Freeze effect support for power-ups
+
+### Combat System
+- Arc-based melee attack detection
+- Configurable sword range and attack arc (90°)
+- Attack cooldown management
+- Multi-zombie hit support in single swing
+
+### Sword Pickup
+- Collectible item with bobbing animation
+- Enables player combat when collected
+- Random spawn position (not at start/exit)
+- Level-based spawn probability
+
+### Power-up System
+- Five power-up types: Speed Boost, Sprint Refill, Invisibility, Shield, Freeze
+- Timed effects with duration tracking
+- Visual feedback (player transparency, zombie color changes)
+- Callback system for game-wide effects (freeze all zombies)
