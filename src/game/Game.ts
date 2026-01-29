@@ -625,8 +625,8 @@ export class Game {
     this.powerUpsCollectedThisLevel = 0;
     this.uiManager.resetStats();
 
-    // Position camera
-    this.followCamera.snapToTarget(playerStartPos);
+    // Position camera (snap behind player's initial facing direction)
+    this.followCamera.snapToTarget(playerStartPos, this.player.getRotation());
 
     // Start the game
     this.gameState.transitionTo(GameStateType.PLAYING);
@@ -1206,8 +1206,8 @@ export class Game {
       this.audioManager.play(SoundEffect.MEERKAT_CHIRP);
     }
 
-    // Update camera
-    this.followCamera.update(deltaTime, this.player.getPosition());
+    // Update camera (follows behind player's facing direction)
+    this.followCamera.update(deltaTime, this.player.getPosition(), this.player.getRotation());
 
     // Update screen shake (applied after camera positioning)
     this.screenShake.update(deltaTime);

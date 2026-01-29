@@ -44,6 +44,9 @@ export class FollowCamera {
   // Player position tracking
   private playerPosition: THREE.Vector3;
 
+  // Player rotation tracking (for camera to follow behind player)
+  private playerRotation: number;
+
   /**
    * Create a FollowCamera
    * @param cameraOrConfig Either an existing camera to control, or a config object
@@ -78,6 +81,7 @@ export class FollowCamera {
     this.targetPosition = new THREE.Vector3();
     this.lookAtTarget = new THREE.Vector3();
     this.playerPosition = new THREE.Vector3();
+    this.playerRotation = 0;
 
     // Set initial position
     this.updateTargetPosition();
@@ -87,10 +91,18 @@ export class FollowCamera {
 
   /**
    * Update camera position to follow player
+   * @param deltaTime Time since last update
+   * @param playerPosition Player's world position
+   * @param playerRotation Player's Y rotation in radians (optional, for rotating camera)
    */
-  update(deltaTime: number, playerPosition: Position): void {
+  update(deltaTime: number, playerPosition: Position, playerRotation?: number): void {
     // Update player position
     this.playerPosition.set(playerPosition.x, playerPosition.y, playerPosition.z);
+
+    // Update player rotation if provided
+    if (playerRotation !== undefined) {
+      this.playerRotation = playerRotation;
+    }
 
     // Calculate target position
     this.updateTargetPosition();
@@ -106,29 +118,41 @@ export class FollowCamera {
   }
 
   /**
-   * Calculate target camera position based on player position
-   * Camera is positioned behind and above player at fixed angle
+   * Calculate target camera position based on player position and rotation
+   * Camera is positioned behind and above player, rotating with player facing
    */
   private updateTargetPosition(): void {
-    // Fixed orientation: camera always looks from south (positive Z) toward north
-    // This means camera is at positive Z relative to player
-
     // Calculate vertical and horizontal components based on angle
     const horizontalDistance = this.distance * Math.cos(this.angle);
     const verticalDistance = this.distance * Math.sin(this.angle);
 
+    // Camera orbits around player based on player's rotation
+    // Player rotation uses atan2(dirX, dirZ):
+    //   rotation=0 → facing -Z (north on screen)
+    //   rotation=PI/2 → facing -X (left)
+    //   rotation=PI → facing +Z (south)
+    // Camera stays behind player (opposite of facing direction)
+    // When rotation=0, camera should be at +Z (behind player facing -Z)
+    const offsetX = Math.sin(this.playerRotation) * horizontalDistance;
+    const offsetZ = Math.cos(this.playerRotation) * horizontalDistance;
+
     this.targetPosition.set(
-      this.playerPosition.x, // Same X as player (no left/right offset)
+      this.playerPosition.x + offsetX,
       this.playerPosition.y + this.heightOffset + verticalDistance,
-      this.playerPosition.z + horizontalDistance // Behind player (positive Z)
+      this.playerPosition.z + offsetZ
     );
   }
 
   /**
    * Immediately snap camera to target position (no lerp)
+   * @param playerPosition Player's world position
+   * @param playerRotation Player's Y rotation in radians (optional)
    */
-  snapToTarget(playerPosition: Position): void {
+  snapToTarget(playerPosition: Position, playerRotation?: number): void {
     this.playerPosition.set(playerPosition.x, playerPosition.y, playerPosition.z);
+    if (playerRotation !== undefined) {
+      this.playerRotation = playerRotation;
+    }
     this.lookAtTarget.copy(this.playerPosition);
     this.updateTargetPosition();
     this.camera.position.copy(this.targetPosition);
