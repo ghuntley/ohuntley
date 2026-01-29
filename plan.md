@@ -12,13 +12,13 @@
 - [x] Set up basic scene with lighting and placeholder content
 - [x] Configure test environment with Vitest
 
-### Phase 2: Core Gameplay Systems (In Progress)
+### Phase 2: Core Gameplay Systems ✅
 - [x] Maze Generator (recursive backtracking algorithm)
 - [x] Input Manager (keyboard and touch controls)
 - [x] Player Entity (movement, sprint, collision)
-- [ ] Maze Renderer (3D hedge walls from generated maze)
-- [ ] Collision System (player-wall, player-zombie)
-- [ ] Camera Follow System (third-person follow camera)
+- [x] Maze Renderer (3D hedge walls from generated maze)
+- [x] Collision System (player-wall, player-zombie)
+- [x] Camera Follow System (third-person follow camera)
 
 ### Phase 3: Enemies & Combat
 - [ ] Zombie Entity (patrol and chase states)
@@ -64,3 +64,24 @@
 - Sprint gauge with regeneration
 - 8-directional movement
 - Basic collision bounds
+
+### Maze Renderer
+- Converts MazeCell[][] to 3D Three.js geometry
+- Uses instanced mesh for walls (performance optimization)
+- Creates floor, start marker, and exit marker
+- Exit marker has animated glow effect
+- Grid-to-world and world-to-grid coordinate conversion
+
+### Collision System
+- Grid-based wall collision detection
+- Circle vs AABB collision with sliding resolution
+- Optimized nearby wall lookup using cell coordinates
+- Support for player-exit detection
+- Circle-circle collision for future zombie/powerup detection
+
+### Follow Camera
+- Third-person fixed-angle camera
+- Smooth lerp-based following
+- Configurable distance, height, angle, and follow speed
+- Snap-to-target for instant positioning
+- Frustum-based visibility checks
