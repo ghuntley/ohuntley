@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Game Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0c0d12;
+      --surface: #151821;
+      --border: #2a2f3d;
+      --text: #e8eaef;
+      --muted: #8b92a8;
+      --accent: #6ee7b7;
+      --accent-dim: #34d399;
+      --glow: rgba(110, 231, 183, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Outfit", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--glow), transparent),
+        linear-gradient(180deg, transparent 0%, var(--bg) 320px);
+    }
+
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.75rem;
+    }
+
+    header h1 {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: clamp(1.75rem, 5vw, 2.35rem);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      margin: 0 0 0.5rem;
+      text-transform: uppercase;
+    }
+
+    header h1 span {
+      color: var(--accent);
+      text-shadow: 0 0 32px var(--glow);
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 36ch;
+      margin-inline: auto;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+
+    a.card {
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      color: inherit;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.35rem 1.35rem 1.2rem;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      min-height: 140px;
+    }
+
+    a.card:hover,
+    a.card:focus-visible {
+      border-color: var(--accent-dim);
+      box-shadow: 0 0 0 1px var(--accent-dim), 0 12px 40px -12px var(--glow);
+      transform: translateY(-2px);
+      outline: none;
+    }
+
+    a.card:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.45;
+      flex: 1;
+    }
+
+    .card .play {
+      margin-top: 1rem;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+    }
+
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1><span>◆</span> Game Arcade</h1>
+      <p>Pick a game below. Each card opens that folder’s <code style="color: var(--accent-dim); font-size: 0.9em;">index.html</code>.</p>
+    </header>
+    <main class="grid" id="lobby" aria-live="polite"></main>
+    <footer id="hint"></footer>
+  </div>
+  <script>
+    /**
+     * Add an object here whenever you add a new game subfolder (must contain index.html).
+     * slug: folder name relative to this file
+     */
+    const GAMES = [
+      {
+        slug: "maze",
+        title: "Maze Runner",
+        blurb: "Random solvable mazes every run. Arrow keys to the exit—beat your time.",
+      },
+      {
+        slug: "meerkat",
+        title: "Meerkat Run",
+        blurb: "Desert chase runner—jump, stages get harder, pause and fullscreen supported.",
+      },
+    ];
+
+    const lobby = document.getElementById("lobby");
+    const hint = document.getElementById("hint");
+
+    function render() {
+      if (!GAMES.length) {
+        lobby.innerHTML =
+          '<p class="empty">No games listed yet. Edit <code>GAMES</code> in <code>index.html</code>.</p>';
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      for (const g of GAMES) {
+        const href = `${g.slug.replace(/^\//, "").replace(/\/$/, "")}/index.html`;
+        const a = document.createElement("a");
+        a.className = "card";
+        a.href = href;
+        a.innerHTML = `
+          <h2>${escapeHtml(g.title)}</h2>
+          <p>${escapeHtml(g.blurb)}</p>
+          <span class="play">Play →</span>
+        `;
+        frag.appendChild(a);
+      }
+      lobby.appendChild(frag);
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    if (window.location.protocol === "file:") {
+      hint.textContent =
+        "Tip: run a local server (e.g. python3 -m http.server) so all games load assets reliably.";
+    }
+
+    render();
+  </script>
+</body>
+</html>
