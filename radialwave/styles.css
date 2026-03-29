@@ -1,0 +1,32 @@
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #02040a;
+  color: #b0bec5;
+  font-family: system-ui, sans-serif;
+  text-align: center;
+}
+.back {
+  float: left;
+  margin: 10px;
+  color: #78909c;
+  text-decoration: none;
+}
+h1 {
+  clear: both;
+}
+.hint {
+  font-size: 0.75rem;
+  color: #546e7a;
+  margin: 0 0.5rem 0.5rem;
+  max-width: 440px;
+  margin-inline: auto;
+}
+canvas {
+  background: #050810;
+  border: 2px solid #263238;
+  max-width: 100%;
+}
+#hud {
+  margin: 0.5rem;
+}
