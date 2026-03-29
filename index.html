@@ -3,168 +3,472 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Game Arcade</title>
+  <title>1980s Arcade</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0c0d12;
-      --surface: #151821;
-      --border: #2a2f3d;
-      --text: #e8eaef;
-      --muted: #8b92a8;
-      --accent: #6ee7b7;
-      --accent-dim: #34d399;
-      --glow: rgba(110, 231, 183, 0.35);
+      --floor: #1a1520;
+      --wall: #0d0b12;
+      --cab-side: #2a1f18;
+      --cab-side-dark: #1a1410;
+      --bezel: #0a0a0c;
+      --panel: #1c1815;
+      --coin: #c9a227;
     }
 
     * {
       box-sizing: border-box;
     }
 
+    html {
+      height: 100%;
+    }
+
     body {
       margin: 0;
+      min-height: 100%;
+      font-family: "VT323", monospace;
+      font-size: 22px;
+      color: #c8c0b8;
+      background: var(--wall);
+      overflow-x: hidden;
+    }
+
+    /* CRT / venue overlay */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1000;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.12) 0px,
+        rgba(0, 0, 0, 0.12) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      opacity: 0.45;
+    }
+
+    .venue {
       min-height: 100vh;
-      font-family: "Outfit", system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, var(--glow), transparent),
-        linear-gradient(180deg, transparent 0%, var(--bg) 320px);
-    }
-
-    .wrap {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 2.5rem 1.25rem 4rem;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 2.75rem;
-    }
-
-    header h1 {
-      font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: clamp(1.75rem, 5vw, 2.35rem);
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      margin: 0 0 0.5rem;
-      text-transform: uppercase;
-    }
-
-    header h1 span {
-      color: var(--accent);
-      text-shadow: 0 0 32px var(--glow);
-    }
-
-    header p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 1.05rem;
-      max-width: 36ch;
-      margin-inline: auto;
-      line-height: 1.5;
-    }
-
-    .grid {
-      display: grid;
-      gap: 1.25rem;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    }
-
-    a.card {
       display: flex;
       flex-direction: column;
-      text-decoration: none;
-      color: inherit;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.35rem 1.35rem 1.2rem;
-      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
-      min-height: 140px;
+      align-items: center;
+      padding: 1.5rem 1rem 3rem;
+      background:
+        radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255, 0, 128, 0.08), transparent 55%),
+        radial-gradient(ellipse 80% 50% at 20% 30%, rgba(0, 255, 255, 0.05), transparent 45%),
+        radial-gradient(ellipse 60% 40% at 85% 25%, rgba(255, 255, 0, 0.04), transparent 40%),
+        linear-gradient(180deg, #12101a 0%, var(--wall) 35%, #08060c 100%);
     }
 
-    a.card:hover,
-    a.card:focus-visible {
-      border-color: var(--accent-dim);
-      box-shadow: 0 0 0 1px var(--accent-dim), 0 12px 40px -12px var(--glow);
-      transform: translateY(-2px);
+    .neon-sign {
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(0.55rem, 2.5vw, 0.85rem);
+      line-height: 1.8;
+      text-align: center;
+      margin: 0.5rem 0 1.25rem;
+      color: #ff6eb4;
+      text-shadow:
+        0 0 6px #ff1493,
+        0 0 20px rgba(255, 20, 147, 0.8),
+        0 0 40px rgba(255, 0, 128, 0.4);
+      animation: flicker 4s infinite;
+      letter-spacing: 0.15em;
+    }
+
+    .neon-sign .sub {
+      display: block;
+      margin-top: 0.75rem;
+      font-size: 0.55em;
+      color: #7df9ff;
+      text-shadow:
+        0 0 6px #00ffff,
+        0 0 18px rgba(0, 255, 255, 0.6);
+      letter-spacing: 0.2em;
+      animation: flicker 5.5s infinite 0.3s;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      92% { opacity: 1; }
+      93% { opacity: 0.85; }
+      94% { opacity: 1; }
+      96% { opacity: 0.9; }
+      97% { opacity: 1; }
+    }
+
+    /* Floor perspective */
+    .floor {
+      flex: 1;
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-end;
+      align-content: flex-end;
+      gap: clamp(0.5rem, 3vw, 2.5rem);
+      padding: 2rem 0.5rem 1rem;
+      perspective: 1400px;
+      perspective-origin: 50% 100%;
+    }
+
+    .floor::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 45%;
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        var(--floor) 25%
+      );
+      transform-origin: 50% 100%;
+      transform: perspective(400px) rotateX(12deg) scale(1.2);
+      pointer-events: none;
+      z-index: 0;
+      box-shadow: inset 0 30px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .venue .floor {
+      position: relative;
+    }
+
+    /* One arcade cabinet */
+    a.cabinet {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      width: min(280px, 42vw);
+      min-width: 200px;
+      text-decoration: none;
+      color: inherit;
+      transform-style: preserve-3d;
+      transform: rotateX(4deg);
+      transition: transform 0.35s ease, filter 0.35s ease;
+      filter: drop-shadow(0 20px 25px rgba(0, 0, 0, 0.65));
+    }
+
+    a.cabinet:hover,
+    a.cabinet:focus-visible {
+      transform: rotateX(2deg) translateY(-12px) scale(1.02);
+      filter: drop-shadow(0 28px 35px rgba(0, 0, 0, 0.75));
       outline: none;
     }
 
-    a.card:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
+    a.cabinet:focus-visible {
+      box-shadow: 0 0 0 3px var(--coin), 0 0 24px rgba(201, 162, 39, 0.5);
+      border-radius: 4px;
     }
 
-    .card h2 {
-      font-size: 1.2rem;
-      font-weight: 700;
-      margin: 0 0 0.5rem;
-      font-family: "JetBrains Mono", ui-monospace, monospace;
+    /* Side panels (wood-ish) */
+    .cab-side-l,
+    .cab-side-r {
+      position: absolute;
+      top: 18%;
+      bottom: 12%;
+      width: 14px;
+      background: repeating-linear-gradient(
+        90deg,
+        var(--cab-side) 0px,
+        var(--cab-side-dark) 2px,
+        var(--cab-side) 4px
+      );
+      z-index: 0;
+      border-radius: 2px;
     }
 
-    .card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.95rem;
-      line-height: 1.45;
-      flex: 1;
+    .cab-side-l {
+      left: -8px;
+      transform: skewY(-2deg);
+      box-shadow: inset -4px 0 8px rgba(0, 0, 0, 0.4);
     }
 
-    .card .play {
-      margin-top: 1rem;
-      font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--accent);
-      letter-spacing: 0.06em;
+    .cab-side-r {
+      right: -8px;
+      transform: skewY(2deg);
+      box-shadow: inset 4px 0 8px rgba(0, 0, 0, 0.4);
     }
 
-    footer {
-      margin-top: 3rem;
+    /* Marquee */
+    .marquee {
+      position: relative;
+      z-index: 2;
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(0.35rem, 1.8vw, 0.5rem);
+      line-height: 1.6;
       text-align: center;
+      padding: 0.85rem 0.6rem;
+      background: linear-gradient(180deg, #1a1025 0%, #0d0612 100%);
+      border: 3px solid #333;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      color: #fff;
+      text-shadow: 0 0 8px var(--marquee-glow, #ff00aa);
+      box-shadow:
+        inset 0 0 30px color-mix(in srgb, var(--marquee-glow, #ff00aa) 25%, transparent),
+        0 -2px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .marquee-glow {
+      position: absolute;
+      inset: -2px;
+      border-radius: 8px 8px 0 0;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--marquee-glow, #ff00aa) 40%, transparent), transparent);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Screen housing */
+    .screen-bezel {
+      position: relative;
+      z-index: 2;
+      background: linear-gradient(145deg, #2a2a2e 0%, #0f0f12 50%, #1a1a1f 100%);
+      padding: 10px 12px 14px;
+      border-left: 3px solid #333;
+      border-right: 3px solid #333;
+      box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.8);
+    }
+
+    .crt {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      background: var(--bezel);
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow:
+        inset 0 0 40px rgba(0, 0, 0, 0.9),
+        inset 0 0 0 2px #111;
+    }
+
+    .crt::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.5) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .crt::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 255, 100, 0.03) 0px,
+        rgba(0, 0, 0, 0.06) 1px,
+        transparent 2px,
+        transparent 4px
+      );
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .crt-inner {
+      position: absolute;
+      inset: 6px;
+      border-radius: 2px;
+      background: radial-gradient(
+        ellipse 100% 80% at 50% 20%,
+        color-mix(in srgb, var(--screen-tint, #00ff88) 35%, #001a0d),
+        #020805 75%
+      );
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+      text-align: center;
+      box-shadow: inset 0 0 60px rgba(0, 255, 128, 0.08);
+    }
+
+    .crt-title {
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(0.28rem, 1.4vw, 0.42rem);
+      line-height: 1.7;
+      color: color-mix(in srgb, var(--screen-tint, #00ff88) 90%, #fff);
+      text-shadow: 0 0 10px var(--screen-tint, #00ff88);
+      margin-bottom: 0.35rem;
+    }
+
+    .crt-blurb {
+      font-size: clamp(0.75rem, 2.8vw, 1rem);
+      line-height: 1.25;
+      color: rgba(180, 255, 200, 0.85);
+      max-width: 95%;
+      text-shadow: 0 0 4px rgba(0, 255, 100, 0.3);
+    }
+
+    .crt-blink {
+      margin-top: 0.5rem;
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(0.22rem, 1.1vw, 0.32rem);
+      color: #ffff66;
+      animation: blink 1.2s step-end infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* Control panel */
+    .control-panel {
+      position: relative;
+      z-index: 2;
+      background: linear-gradient(180deg, #252220 0%, var(--panel) 40%, #151210 100%);
+      padding: 1rem 1rem 1.1rem;
+      border: 3px solid #333;
+      border-top: 2px solid #1a1a1a;
+      border-radius: 0 0 8px 8px;
+      clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%);
+      box-shadow: 0 8px 0 #0a0806, 0 12px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0 0.25rem;
+    }
+
+    .joystick {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #4a4540, #1a1815);
+      box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.1),
+        0 4px 0 #0a0908,
+        0 5px 8px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .joystick::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 4px;
+      width: 14px;
+      height: 22px;
+      margin-left: -7px;
+      background: linear-gradient(180deg, #c0392b, #7b241c);
+      border-radius: 4px 4px 2px 2px;
+      box-shadow: 0 2px 0 #4a1510;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #e74c3c, #922b21);
+      box-shadow: 0 3px 0 #5c1f18, 0 4px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn:nth-child(2) {
+      width: 20px;
+      height: 20px;
+      margin-bottom: 4px;
+      background: radial-gradient(circle at 30% 30%, #f39c12, #a04000);
+      box-shadow: 0 3px 0 #5c3008, 0 4px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .coin-strip {
+      margin-top: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
       font-size: 0.85rem;
-      color: var(--muted);
-      font-family: "JetBrains Mono", ui-monospace, monospace;
+      letter-spacing: 0.2em;
+      color: var(--coin);
+      text-shadow: 0 0 8px rgba(201, 162, 39, 0.5);
+    }
+
+    .coin-slot {
+      width: 8px;
+      height: 28px;
+      background: linear-gradient(90deg, #1a1a1a, #333, #1a1a1a);
+      border-radius: 2px;
+      box-shadow: inset 0 2px 4px #000;
+    }
+
+    footer.hint {
+      margin-top: 1.5rem;
+      font-size: 1rem;
+      color: #6a6570;
+      text-align: center;
+      max-width: 40ch;
+      position: relative;
+      z-index: 2;
     }
 
     .empty {
+      grid-column: 1 / -1;
       text-align: center;
-      color: var(--muted);
       padding: 2rem;
-      border: 1px dashed var(--border);
-      border-radius: 14px;
+      border: 2px dashed #444;
+      color: #888;
+    }
+
+    @media (max-width: 520px) {
+      a.cabinet {
+        width: min(100%, 260px);
+        transform: rotateX(2deg);
+      }
+
+      .floor {
+        perspective: none;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="venue">
     <header>
-      <h1><span>◆</span> Game Arcade</h1>
-      <p>Pick a game below. Each card opens that folder’s <code style="color: var(--accent-dim); font-size: 0.9em;">index.html</code>.</p>
+      <p class="neon-sign">
+        FUNLAND ARCADE
+        <span class="sub">WALK UP · INSERT IMAGINATION</span>
+      </p>
     </header>
-    <main class="grid" id="lobby" aria-live="polite"></main>
-    <footer id="hint"></footer>
+    <div class="floor" id="lobby" role="list" aria-label="Arcade games"></div>
+    <footer class="hint" id="hint"></footer>
   </div>
   <script>
     /**
-     * Add an object here whenever you add a new game subfolder (must contain index.html).
-     * slug: folder name relative to this file
+     * Add an object per game folder (needs index.html).
+     * Optional: marquee, screen — hex colors for neon / CRT tint
      */
     const GAMES = [
       {
         slug: "maze",
-        title: "Maze Runner",
-        blurb: "Random solvable mazes every run. Arrow keys to the exit—beat your time.",
+        title: "MAZE RUNNER",
+        blurb: "Random mazes · arrows · beat the clock",
+        marquee: "#ff00cc",
+        screen: "#00ffaa",
       },
       {
         slug: "meerkat",
-        title: "Meerkat Run",
-        blurb: "Desert chase runner—jump, stages get harder, pause and fullscreen supported.",
+        title: "MEERKAT RUN",
+        blurb: "Desert chase · jump · 3 stages",
+        marquee: "#00e5ff",
+        screen: "#ffaa00",
       },
     ];
 
@@ -174,7 +478,7 @@
     function render() {
       if (!GAMES.length) {
         lobby.innerHTML =
-          '<p class="empty">No games listed yet. Edit <code>GAMES</code> in <code>index.html</code>.</p>';
+          '<p class="empty">No cabs wired yet — edit <code>GAMES</code> in <code>index.html</code>.</p>';
         return;
       }
 
@@ -182,12 +486,40 @@
       for (const g of GAMES) {
         const href = `${g.slug.replace(/^\//, "").replace(/\/$/, "")}/index.html`;
         const a = document.createElement("a");
-        a.className = "card";
+        a.className = "cabinet";
         a.href = href;
+        a.setAttribute("role", "listitem");
+        a.style.setProperty("--marquee-glow", g.marquee || "#ff00aa");
+        a.style.setProperty("--screen-tint", g.screen || "#00ff88");
         a.innerHTML = `
-          <h2>${escapeHtml(g.title)}</h2>
-          <p>${escapeHtml(g.blurb)}</p>
-          <span class="play">Play →</span>
+          <span class="cab-side-l" aria-hidden="true"></span>
+          <span class="cab-side-r" aria-hidden="true"></span>
+          <div class="marquee">
+            <span class="marquee-glow" aria-hidden="true"></span>
+            ${escapeHtml(g.title)}
+          </div>
+          <div class="screen-bezel">
+            <div class="crt">
+              <div class="crt-inner">
+                <span class="crt-title">${escapeHtml(g.title)}</span>
+                <p class="crt-blurb">${escapeHtml(g.blurb)}</p>
+                <span class="crt-blink">▶ PUSH START</span>
+              </div>
+            </div>
+          </div>
+          <div class="control-panel">
+            <div class="controls-row">
+              <div class="joystick" aria-hidden="true"></div>
+              <div class="buttons" aria-hidden="true">
+                <span class="btn"></span><span class="btn"></span>
+              </div>
+            </div>
+            <div class="coin-strip">
+              <span class="coin-slot" aria-hidden="true"></span>
+              FREE PLAY
+              <span class="coin-slot" aria-hidden="true"></span>
+            </div>
+          </div>
         `;
         frag.appendChild(a);
       }
@@ -204,7 +536,7 @@
 
     if (window.location.protocol === "file:") {
       hint.textContent =
-        "Tip: run a local server (e.g. python3 -m http.server) so all games load assets reliably.";
+        "Local tip: use python3 -m http.server so each cab’s game loads all its files.";
     }
 
     render();
