@@ -42,9 +42,9 @@ const CONFIG = {
 };
 
 /** @typedef {{ x: number, y: number, w: number, h: number }} Plat */
-/** @typedef {{ name: string, worldWidth: number, diffStartX: number, diffEndX: number, birdSpeedMul: number, autoRunMul: number, catchDistMul: number, platforms: readonly Plat[], goal: { x: number, y: number, w: number, h: number } }} LevelDef */
+/** @typedef {{ name: string, worldWidth: number, diffStartX: number, diffEndX: number, birdSpeedMul: number, catchDistMul: number, platforms: readonly Plat[], goal: { x: number, y: number, w: number, h: number } }} LevelDef */
 
-/** Three-stage run: each stage is longer, tighter, and applies enemy speed multipliers. */
+/** Multi-stage run: each stage is longer, tighter; `birdSpeedMul` scales both the falcon and auto-run speed. */
 const LEVELS = Object.freeze(
   /** @type {readonly LevelDef[]} */ ([
     Object.freeze({
@@ -53,7 +53,6 @@ const LEVELS = Object.freeze(
       diffStartX: 18,
       diffEndX: 985,
       birdSpeedMul: 1,
-      autoRunMul: 1,
       catchDistMul: 1,
       platforms: Object.freeze([
         { x: 0, y: 154, w: 88, h: 10 },
@@ -77,7 +76,6 @@ const LEVELS = Object.freeze(
       diffStartX: 18,
       diffEndX: 1040,
       birdSpeedMul: 1.12,
-      autoRunMul: 1.06,
       catchDistMul: 0.94,
       platforms: Object.freeze([
         { x: 0, y: 154, w: 70, h: 10 },
@@ -105,7 +103,6 @@ const LEVELS = Object.freeze(
       diffStartX: 18,
       diffEndX: 1220,
       birdSpeedMul: 1.24,
-      autoRunMul: 1.12,
       catchDistMul: 0.86,
       platforms: Object.freeze([
         { x: 0, y: 154, w: 60, h: 10 },
@@ -132,6 +129,133 @@ const LEVELS = Object.freeze(
         { x: 1092, y: 104, w: 280, h: 10 },
       ]),
       goal: Object.freeze({ x: 1265, y: 76, w: 28, h: 32 }),
+    }),
+    Object.freeze({
+      name: "Sirocco Steps",
+      worldWidth: 1580,
+      diffStartX: 18,
+      diffEndX: 1360,
+      birdSpeedMul: 1.36,
+      catchDistMul: 0.78,
+      platforms: Object.freeze([
+        { x: 0, y: 154, w: 56, h: 10 },
+        { x: 78, y: 142, w: 36, h: 8 },
+        { x: 134, y: 128, w: 28, h: 8 },
+        { x: 182, y: 114, w: 26, h: 8 },
+        { x: 228, y: 130, w: 26, h: 8 },
+        { x: 274, y: 104, w: 34, h: 8 },
+        { x: 328, y: 120, w: 28, h: 8 },
+        { x: 376, y: 94, w: 36, h: 8 },
+        { x: 430, y: 112, w: 30, h: 8 },
+        { x: 480, y: 88, w: 34, h: 8 },
+        { x: 532, y: 106, w: 28, h: 8 },
+        { x: 580, y: 84, w: 36, h: 8 },
+        { x: 634, y: 102, w: 30, h: 8 },
+        { x: 684, y: 80, w: 34, h: 8 },
+        { x: 736, y: 98, w: 28, h: 8 },
+        { x: 784, y: 76, w: 36, h: 8 },
+        { x: 836, y: 94, w: 30, h: 8 },
+        { x: 886, y: 72, w: 36, h: 8 },
+        { x: 938, y: 92, w: 28, h: 8 },
+        { x: 986, y: 70, w: 38, h: 8 },
+        { x: 1042, y: 88, w: 30, h: 8 },
+        { x: 1092, y: 104, w: 200, h: 10 },
+        { x: 1302, y: 118, w: 28, h: 8 },
+        { x: 1348, y: 96, w: 34, h: 8 },
+        { x: 1398, y: 114, w: 28, h: 8 },
+        { x: 1444, y: 92, w: 36, h: 8 },
+        { x: 1492, y: 110, w: 88, h: 10 },
+      ]),
+      goal: Object.freeze({ x: 1518, y: 76, w: 28, h: 32 }),
+    }),
+    Object.freeze({
+      name: "Mirage Line",
+      worldWidth: 1820,
+      diffStartX: 18,
+      diffEndX: 1520,
+      birdSpeedMul: 1.48,
+      catchDistMul: 0.72,
+      platforms: Object.freeze([
+        { x: 0, y: 154, w: 54, h: 10 },
+        { x: 78, y: 142, w: 34, h: 8 },
+        { x: 134, y: 128, w: 26, h: 8 },
+        { x: 182, y: 114, w: 24, h: 8 },
+        { x: 228, y: 130, w: 24, h: 8 },
+        { x: 274, y: 104, w: 32, h: 8 },
+        { x: 328, y: 120, w: 26, h: 8 },
+        { x: 376, y: 94, w: 34, h: 8 },
+        { x: 430, y: 112, w: 28, h: 8 },
+        { x: 480, y: 88, w: 32, h: 8 },
+        { x: 532, y: 106, w: 26, h: 8 },
+        { x: 580, y: 84, w: 34, h: 8 },
+        { x: 634, y: 102, w: 28, h: 8 },
+        { x: 684, y: 80, w: 32, h: 8 },
+        { x: 736, y: 98, w: 26, h: 8 },
+        { x: 784, y: 76, w: 34, h: 8 },
+        { x: 836, y: 94, w: 28, h: 8 },
+        { x: 886, y: 72, w: 34, h: 8 },
+        { x: 938, y: 92, w: 26, h: 8 },
+        { x: 986, y: 70, w: 36, h: 8 },
+        { x: 1042, y: 88, w: 28, h: 8 },
+        { x: 1092, y: 104, w: 178, h: 10 },
+        { x: 1288, y: 118, w: 26, h: 8 },
+        { x: 1332, y: 96, w: 32, h: 8 },
+        { x: 1380, y: 114, w: 26, h: 8 },
+        { x: 1424, y: 92, w: 34, h: 8 },
+        { x: 1472, y: 110, w: 82, h: 10 },
+        { x: 1564, y: 94, w: 26, h: 8 },
+        { x: 1608, y: 78, w: 30, h: 8 },
+        { x: 1656, y: 100, w: 24, h: 8 },
+        { x: 1696, y: 86, w: 64, h: 10 },
+      ]),
+      goal: Object.freeze({ x: 1745, y: 76, w: 28, h: 32 }),
+    }),
+    Object.freeze({
+      name: "Last Burrow",
+      worldWidth: 2000,
+      diffStartX: 18,
+      diffEndX: 1680,
+      birdSpeedMul: 1.6,
+      catchDistMul: 0.66,
+      platforms: Object.freeze([
+        { x: 0, y: 154, w: 52, h: 10 },
+        { x: 76, y: 142, w: 32, h: 8 },
+        { x: 130, y: 128, w: 24, h: 8 },
+        { x: 176, y: 114, w: 24, h: 8 },
+        { x: 222, y: 130, w: 24, h: 8 },
+        { x: 268, y: 104, w: 30, h: 8 },
+        { x: 320, y: 120, w: 24, h: 8 },
+        { x: 366, y: 94, w: 32, h: 8 },
+        { x: 418, y: 112, w: 26, h: 8 },
+        { x: 466, y: 88, w: 30, h: 8 },
+        { x: 516, y: 106, w: 24, h: 8 },
+        { x: 562, y: 84, w: 32, h: 8 },
+        { x: 614, y: 102, w: 26, h: 8 },
+        { x: 662, y: 80, w: 30, h: 8 },
+        { x: 712, y: 98, w: 24, h: 8 },
+        { x: 758, y: 76, w: 32, h: 8 },
+        { x: 808, y: 94, w: 26, h: 8 },
+        { x: 856, y: 72, w: 32, h: 8 },
+        { x: 906, y: 92, w: 24, h: 8 },
+        { x: 952, y: 70, w: 34, h: 8 },
+        { x: 1006, y: 88, w: 26, h: 8 },
+        { x: 1054, y: 104, w: 165, h: 10 },
+        { x: 1238, y: 118, w: 24, h: 8 },
+        { x: 1280, y: 96, w: 30, h: 8 },
+        { x: 1326, y: 114, w: 24, h: 8 },
+        { x: 1368, y: 92, w: 32, h: 8 },
+        { x: 1414, y: 110, w: 76, h: 10 },
+        { x: 1500, y: 94, w: 24, h: 8 },
+        { x: 1542, y: 78, w: 28, h: 8 },
+        { x: 1586, y: 100, w: 24, h: 8 },
+        { x: 1624, y: 86, w: 58, h: 10 },
+        { x: 1692, y: 108, w: 24, h: 8 },
+        { x: 1732, y: 88, w: 28, h: 8 },
+        { x: 1774, y: 106, w: 24, h: 8 },
+        { x: 1812, y: 90, w: 48, h: 10 },
+        { x: 1880, y: 108, w: 120, h: 10 },
+      ]),
+      goal: Object.freeze({ x: 1938, y: 76, w: 28, h: 32 }),
     }),
   ])
 );
@@ -392,6 +516,14 @@ class MeerkatChaseGame {
       return;
     }
 
+    if (this.state === GameState.win || this.state === GameState.lose) {
+      if (e.code === "Enter" || e.code === "Space" || e.code === "KeyR") {
+        e.preventDefault();
+        this.reset();
+      }
+      return;
+    }
+
     if (this.state === GameState.play) {
       if (this.paused && e.code === "Enter") {
         e.preventDefault();
@@ -562,6 +694,10 @@ class MeerkatChaseGame {
       saveHighScore(CONFIG.highScoreStorageKey, s);
       this._newHighScore = true;
     }
+    const AT = globalThis.ArcadeTokens;
+    if (typeof AT !== "undefined" && AT.earnFromGameScore) {
+      AT.earnFromGameScore("meerkat", s);
+    }
   }
 
   #segmentScoreRaw() {
@@ -636,7 +772,7 @@ class MeerkatChaseGame {
 
     ctx.font = "6px monospace, Courier New, monospace";
     ctx.fillStyle = "#e8d4c8";
-    ctx.fillText("3 stages — each burrow is harder than the last", GW / 2, 68);
+    ctx.fillText(`${LEVELS.length} stages — bird and sprint ramp together`, GW / 2, 68);
     ctx.fillText("Outrun the falcon · jump the gaps", GW / 2, 80);
     ctx.fillText("Auto-run · Space / W / ↑ jump", GW / 2, 92);
     ctx.fillStyle = "#c9a86c";
@@ -684,7 +820,7 @@ class MeerkatChaseGame {
     const t = this.#runProgress();
     const { autoRunMin, autoRunMax } = CONFIG;
     const base = autoRunMin + (autoRunMax - autoRunMin) * t;
-    return base * this.#level().autoRunMul;
+    return base * this.#level().birdSpeedMul;
   }
 
   #scaledBirdSpeed() {
@@ -1186,7 +1322,7 @@ class MeerkatChaseGame {
         y += 10;
       }
       ctx.fillStyle = "#a8d4a0";
-      ctx.fillText(`Hi ${this.highScore} · R — new run (all stages)`, GW / 2, y);
+      ctx.fillText(`Hi ${this.highScore} · Enter · Space · R — new run`, GW / 2, y);
     } else if (state === GameState.lose) {
       const tall = this._newHighScore ? 54 : 44;
       ctx.fillStyle = "rgba(50,10,10,0.75)";
@@ -1202,11 +1338,7 @@ class MeerkatChaseGame {
         y += 10;
       }
       ctx.fillStyle = "#ffaaaa";
-      ctx.fillText(
-        `Hi ${this.highScore} · R — retry from stage 1`,
-        GW / 2,
-        y
-      );
+      ctx.fillText(`Hi ${this.highScore} · Enter · Space · R — retry`, GW / 2, y);
     }
 
     if (state === GameState.menu) {

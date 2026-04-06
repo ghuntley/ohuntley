@@ -20,11 +20,15 @@
                 <ol id="highScoresList"></ol>
             </div>
         </div>
-        <canvas id="gameCanvas"></canvas>
+        <canvas id="gameCanvas" tabindex="0" role="img" aria-label="Maze playfield — use arrow keys"></canvas>
+        <p class="maze-shortcuts">
+            <kbd>R</kbd> restart · <kbd>P</kbd> or <kbd>Esc</kbd> pause · <kbd>Space</kbd> also pauses
+        </p>
         <div class="controls">
-            <button id="restartButton">Restart Game</button>
+            <button id="restartButton" type="button">Restart</button>
         </div>
     </div>
+    <script src="../arcade-tokens.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

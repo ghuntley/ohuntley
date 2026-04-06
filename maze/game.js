@@ -3,6 +3,29 @@ const ctx = canvas.getContext('2d');
 const timerElement = document.getElementById('timer');
 const restartButton = document.getElementById('restartButton');
 
+const pauseButton = document.createElement('button');
+pauseButton.type = 'button';
+pauseButton.id = 'maze-pause-btn';
+pauseButton.setAttribute('aria-label', 'Pause or resume game');
+pauseButton.textContent = '⏸️';
+pauseButton.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 24px;
+    touch-action: none;
+    z-index: 1000;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+`;
+document.body.appendChild(pauseButton);
+
 // Set canvas size
 canvas.width = 400;
 canvas.height = 400;
@@ -543,6 +566,46 @@ function displayHighScores() {
     });
 }
 
+function showMazeToast(msg) {
+    let el = document.getElementById('maze-toast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'maze-toast';
+        el.className = 'maze-toast';
+        el.setAttribute('role', 'status');
+        document.body.appendChild(el);
+        el.addEventListener('click', () => el.classList.remove('maze-toast--on'));
+    }
+    el.textContent = msg;
+    el.classList.add('maze-toast--on');
+    clearTimeout(showMazeToast._hide);
+    showMazeToast._hide = setTimeout(() => el.classList.remove('maze-toast--on'), 6500);
+}
+
+function togglePause() {
+    if (!gameStarted || gameWon) return;
+    gamePaused = !gamePaused;
+    if (gamePaused) {
+        pauseStartTime = Date.now();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = '30px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+        pauseButton.textContent = '▶️';
+    } else {
+        startTime += (Date.now() - pauseStartTime);
+        drawMaze();
+        pauseButton.textContent = '⏸️';
+    }
+}
+
+pauseButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    togglePause();
+});
+
 function updateTimer() {
     if (gameStarted && !gameWon && !gamePaused) {
         elapsedTime = Math.floor((Date.now() - startTime) / 1000);
@@ -556,25 +619,19 @@ function updateTimer() {
 }
 
 function movePlayer(e) {
-    // Handle pause with spacebar
+    if (e.code === 'KeyR') {
+        e.preventDefault();
+        restartGame();
+        return;
+    }
+    if ((e.code === 'KeyP' || e.code === 'Escape') && gameStarted && !gameWon) {
+        e.preventDefault();
+        togglePause();
+        return;
+    }
     if (e.code === 'Space') {
         e.preventDefault();
-        if (gameStarted && !gameWon) {
-            gamePaused = !gamePaused;
-            if (gamePaused) {
-                pauseStartTime = Date.now();
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = 'white';
-                ctx.font = '30px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
-            } else {
-                // Adjust start time by pause duration
-                startTime += (Date.now() - pauseStartTime);
-                drawMaze();
-            }
-        }
+        if (gameStarted && !gameWon) togglePause();
         return;
     }
 
@@ -626,7 +683,12 @@ function movePlayer(e) {
         player.y = newY;
 
         if (checkWin()) {
-            alert(`Congratulations! You completed the maze in ${elapsedTime} seconds!`);
+            const finalScore = calculateScore(elapsedTime);
+            updateHighScores(finalScore);
+            if (typeof ArcadeTokens !== "undefined" && ArcadeTokens.earnFromGameScore) {
+                ArcadeTokens.earnFromGameScore("maze", finalScore);
+            }
+            showMazeToast(`You cleared the maze in ${elapsedTime}s — nice run! (click to dismiss)`);
         }
     }
 
@@ -638,6 +700,8 @@ function restartGame() {
     player.y = cellSize;
     gameStarted = false;
     gameWon = false;
+    gamePaused = false;
+    pauseButton.textContent = '⏸️';
     elapsedTime = 0;
     currentScore = 0;
     currentLevel = 1;
@@ -692,49 +756,6 @@ function validatePath(startRow, startCol, endRow, endCol) {
 
 // Initialize high scores display
 displayHighScores();
-
-// Add pause button for touch interface
-const pauseButton = document.createElement('button');
-pauseButton.textContent = '⏸️';
-pauseButton.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    font-size: 24px;
-    touch-action: none;
-    z-index: 1000;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-`;
-
-pauseButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if (gameStarted && !gameWon) {
-        gamePaused = !gamePaused;
-        if (gamePaused) {
-            pauseStartTime = Date.now();
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'white';
-            ctx.font = '30px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
-            pauseButton.textContent = '▶️';
-        } else {
-            startTime += (Date.now() - pauseStartTime);
-            drawMaze();
-            pauseButton.textContent = '⏸️';
-        }
-    }
-});
-
-document.body.appendChild(pauseButton);
 
 // Initialize touch controls
 initializeTouchControls();

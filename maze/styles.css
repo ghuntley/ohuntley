@@ -79,6 +79,48 @@ body {
     animation: highlight 1s ease-in-out;
 }
 
+.maze-toast {
+    position: fixed;
+    bottom: 1.25rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(120%);
+    z-index: 2000;
+    max-width: min(36rem, calc(100vw - 2rem));
+    padding: 0.85rem 1.25rem;
+    border-radius: 10px;
+    background: rgba(26, 95, 74, 0.96);
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1.4;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    transition: transform 0.35s ease, opacity 0.35s ease;
+    opacity: 0;
+    pointer-events: none;
+    text-align: center;
+}
+
+.maze-toast.maze-toast--on {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.maze-shortcuts {
+    margin: 8px 0 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.maze-shortcuts kbd {
+    display: inline-block;
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background: #f5f5f5;
+    font-size: 0.9em;
+}
+
 h1 {
     color: #333;
     margin-bottom: 20px;
