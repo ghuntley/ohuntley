@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meerkat Manor — Colony Tycoon</title>
+  <style>
+    :root {
+      --sand: #e8d4a8;
+      --sand-dark: #c9b078;
+      --earth: #5c4033;
+      --burrow: #3d291f;
+      --accent: #d4a03a;
+      --sky: #87a8c4;
+      --good: #4a8f5c;
+      --warn: #c45c3a;
+      --text: #2a1f18;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(180deg, #6b9ec4 0%, #a8c8e0 22%, var(--sand) 42%, var(--sand-dark) 100%);
+      color: var(--text);
+      padding: 12px 14px 28px;
+    }
+    .back {
+      display: inline-block;
+      margin-bottom: 10px;
+      color: var(--burrow);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .back:hover { text-decoration: underline; }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.5rem;
+      letter-spacing: 0.04em;
+      color: var(--burrow);
+    }
+    .tagline { margin: 0 0 12px; font-size: 0.95rem; opacity: 0.88; }
+
+    /* —— Visual scene —— */
+    .scene {
+      max-width: 920px;
+      margin-bottom: 14px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 3px solid var(--earth);
+      box-shadow: 0 8px 24px rgba(44, 30, 20, 0.25);
+      background: #5a9fc9;
+    }
+    .scene svg { display: block; width: 100%; height: auto; vertical-align: middle; }
+    .scene-sun { animation: sunPulse 4s ease-in-out infinite; transform-origin: 82px 48px; }
+    @keyframes sunPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.06); opacity: 0.95; }
+    }
+    .scene-cloud { animation: drift 28s linear infinite; }
+    @keyframes drift {
+      from { transform: translateX(0); }
+      to { transform: translateX(24px); }
+    }
+    .jackal-silhouette {
+      transition: opacity 0.4s ease;
+    }
+
+    .mob-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 4px 6px;
+      padding: 10px 12px 12px;
+      background: linear-gradient(180deg, rgba(232, 212, 168, 0.95), rgba(201, 176, 120, 0.98));
+      border-top: 2px solid var(--earth);
+      min-height: 56px;
+    }
+    .mkat {
+      position: relative;
+      width: 22px;
+      height: 34px;
+      flex-shrink: 0;
+    }
+    .mkat .bod {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 20px;
+      background: linear-gradient(180deg, #c4a574, #8b6f4a);
+      border-radius: 50% 50% 45% 45%;
+      border: 1px solid #5c4033;
+    }
+    .mkat .tail {
+      position: absolute;
+      bottom: 6px;
+      left: 0;
+      width: 10px;
+      height: 5px;
+      background: #8b6f4a;
+      border-radius: 50%;
+      transform: rotate(-25deg);
+    }
+    .mkat .head {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 14px;
+      background: linear-gradient(180deg, #d4b896, #a08060);
+      border-radius: 50%;
+      border: 1px solid #5c4033;
+    }
+    .mkat .ear {
+      position: absolute;
+      top: -2px;
+      width: 5px;
+      height: 7px;
+      background: #6b5340;
+      border-radius: 50% 50% 0 0;
+    }
+    .mkat .ear.l { left: 1px; transform: rotate(-15deg); }
+    .mkat .ear.r { right: 1px; transform: rotate(15deg); }
+    .mkat .eye {
+      position: absolute;
+      top: 5px;
+      width: 3px;
+      height: 3px;
+      background: #1a1010;
+      border-radius: 50%;
+    }
+    .mkat .eye.l { left: 2px; }
+    .mkat .eye.r { right: 2px; }
+    .mkat.sentry .bod { box-shadow: 0 0 0 2px #4a8f5c; }
+    .mkat.forage .head::after {
+      content: "";
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 4px;
+      background: #6b8f4a;
+      border-radius: 2px;
+    }
+    .mkat.rest .bod { opacity: 0.75; filter: saturate(0.85); }
+    .mkat-more {
+      align-self: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--burrow);
+      padding: 4px 8px;
+    }
+
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.65);
+      border-radius: 12px;
+      border: 2px solid var(--earth);
+      max-width: 920px;
+    }
+    .bar button {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 2px solid var(--earth);
+      background: var(--sand);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .bar button:hover { background: #fff; }
+
+    .vbar-wrap {
+      margin-bottom: 8px;
+      max-width: 920px;
+    }
+    .vbar-wrap label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--burrow);
+    }
+    .vbar-track {
+      height: 14px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+      border: 2px solid var(--earth);
+    }
+    .vbar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.35s ease;
+    }
+    .vbar-fill.morale {
+      background: linear-gradient(90deg, #3d7a4a, #6ecf7a);
+    }
+    .vbar-fill.pred {
+      background: linear-gradient(90deg, #e8b060, #c45c3a);
+    }
+    .vbar-fill.renown {
+      background: linear-gradient(90deg, #8b7355, #d4a03a);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+      max-width: 920px;
+    }
+    .stat {
+      background: rgba(61, 41, 31, 0.92);
+      color: #f5e6d3;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stat .ico { font-size: 1.35rem; line-height: 1; }
+    .stat .txt { flex: 1; min-width: 0; }
+    .stat strong { display: block; font-size: 1.2rem; color: #fff; }
+    .stat span { font-size: 0.75rem; opacity: 0.85; }
+
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      max-width: 920px;
+    }
+    @media (max-width: 720px) { .panels { grid-template-columns: 1fr; } }
+    .panel {
+      background: rgba(255, 255, 255, 0.82);
+      border-radius: 12px;
+      padding: 14px 16px;
+      border: 2px solid var(--earth);
+    }
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      color: var(--burrow);
+      border-bottom: 2px solid var(--sand-dark);
+      padding-bottom: 8px;
+    }
+    .action {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .action:last-child { border-bottom: none; }
+    .action p { margin: 0; font-size: 0.9rem; flex: 1; }
+    .action button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      background: var(--good);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .action button:disabled {
+      background: #999;
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+    .row-assign {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .row-assign label { min-width: 100px; font-weight: 600; }
+    .row-assign input[type="range"] { flex: 1; }
+    .row-assign .val { width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+    .log {
+      max-width: 920px;
+      margin-top: 14px;
+      background: rgba(30, 22, 18, 0.9);
+      color: #e8dcc8;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 0.85rem;
+      max-height: 140px;
+      overflow-y: auto;
+      line-height: 1.45;
+    }
+    .log div { margin-bottom: 4px; }
+    .log .bad { color: #ff9a8a; }
+    .log .good { color: #9de8a8; }
+    .goal {
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      background: rgba(212, 160, 58, 0.4);
+      border-radius: 10px;
+      border: 2px dashed var(--earth);
+      font-size: 0.9rem;
+      max-width: 920px;
+    }
+    .season-badge {
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border: 2px solid var(--earth);
+      background: rgba(255, 255, 255, 0.75);
+      max-width: 220px;
+    }
+    .season-badge small { display: block; font-weight: 500; opacity: 0.85; margin-top: 2px; font-size: 0.72rem; }
+    .fatigue-warn { color: var(--warn); font-weight: 700; }
+    .depth-panels { grid-template-columns: repeat(3, 1fr); }
+    @media (max-width: 900px) { .depth-panels { grid-template-columns: 1fr; } }
+    .trad-taken { opacity: 0.55; }
+    .trad-taken button { background: #6a8f6e !important; }
+    kbd { background: #ddd; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../index.html">← Arcade</a>
+  <h1>Meerkat Manor</h1>
+  <p class="tagline">Grow the greatest mob: dig chambers, balance foragers and sentries, and keep the jackals guessing.</p>
+
+  <div class="scene" aria-hidden="true">
+    <svg viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gSky" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#7eb8e0" />
+          <stop offset="55%" style="stop-color:#b8d4ec" />
+          <stop offset="100%" style="stop-color:#d4c49a" />
+        </linearGradient>
+        <linearGradient id="gDune" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#e8d4a8" />
+          <stop offset="100%" style="stop-color:#b89560" />
+        </linearGradient>
+      </defs>
+      <rect width="400" height="120" fill="url(#gSky)" />
+      <g class="scene-cloud" opacity="0.85">
+        <ellipse cx="120" cy="38" rx="28" ry="12" fill="#fff" />
+        <ellipse cx="140" cy="36" rx="22" ry="10" fill="#fff" />
+        <ellipse cx="300" cy="52" rx="24" ry="9" fill="#fff" />
+        <ellipse cx="318" cy="50" rx="18" ry="8" fill="#fff" />
+      </g>
+      <g class="scene-sun">
+        <circle cx="82" cy="42" r="22" fill="#ffe566" stroke="#f5c842" stroke-width="2" />
+        <g stroke="#ffe566" stroke-width="2" stroke-linecap="round">
+          <line x1="82" y1="12" x2="82" y2="4" />
+          <line x1="82" y1="72" x2="82" y2="80" />
+          <line x1="52" y1="42" x2="44" y2="42" />
+          <line x1="112" y1="42" x2="120" y2="42" />
+          <line x1="60" y1="24" x2="54" y2="18" />
+          <line x1="104" y1="60" x2="110" y2="66" />
+          <line x1="104" y1="24" x2="110" y2="18" />
+          <line x1="60" y1="60" x2="54" y2="66" />
+        </g>
+      </g>
+      <path d="M0 95 Q100 78 200 88 T400 82 L400 120 L0 120 Z" fill="url(#gDune)" />
+      <path d="M0 105 Q140 92 280 100 T400 95 L400 120 L0 120 Z" fill="#c9a878" opacity="0.9" />
+      <ellipse cx="95" cy="102" rx="14" ry="6" fill="#4a3528" opacity="0.55" />
+      <ellipse cx="98" cy="100" rx="5" ry="3" fill="#1a1210" opacity="0.5" />
+      <ellipse cx="250" cy="108" rx="18" ry="7" fill="#4a3528" opacity="0.5" />
+      <ellipse cx="254" cy="106" rx="6" ry="3" fill="#1a1210" opacity="0.45" />
+      <ellipse cx="320" cy="104" rx="12" ry="5" fill="#4a3528" opacity="0.45" />
+      <ellipse cx="323" cy="102" rx="4" ry="2" fill="#1a1210" opacity="0.4" />
+      <g id="burrowMarkers"></g>
+      <g class="jackal-silhouette" id="jackalG" opacity="0" style="pointer-events:none">
+        <ellipse cx="360" cy="96" rx="16" ry="8" fill="#2a2030" />
+        <circle cx="352" cy="90" r="6" fill="#2a2030" />
+        <path d="M348 88 L344 82 L346 86 Z" fill="#2a2030" />
+        <path d="M372 96 L382 94 L376 100 Z" fill="#2a2030" />
+      </g>
+    </svg>
+    <div class="mob-strip" id="mobStrip" title="Your mob"></div>
+  </div>
+
+  <div class="bar">
+    <span><strong>Day</strong> <span id="day">1</span></span>
+    <div class="season-badge" id="seasonBadge" title="Season effects change each day">Season</div>
+    <span id="tierLabel" style="font-size:0.85rem;font-weight:600;color:var(--burrow);">Band</span>
+    <button type="button" id="btnPause">Pause</button>
+    <button type="button" id="btnSpeed">Speed: 1×</button>
+    <button type="button" id="btnReset">New colony</button>
+  </div>
+
+  <div class="vbar-wrap">
+    <label><span>Morale</span><span id="moralePct">0%</span></label>
+    <div class="vbar-track"><div class="vbar-fill morale" id="barMorale" style="width:0%"></div></div>
+  </div>
+  <div class="vbar-wrap">
+    <label><span>Predator tension</span><span id="predPct">0%</span></label>
+    <div class="vbar-track"><div class="vbar-fill pred" id="barPred" style="width:0%"></div></div>
+  </div>
+  <div class="vbar-wrap">
+    <label><span>Renown toward victory</span><span id="renownPct">0 / 20,000</span></label>
+    <div class="vbar-track"><div class="vbar-fill renown" id="barRenown" style="width:0%"></div></div>
+  </div>
+
+  <div class="goal" id="goal">
+    <strong>Goal:</strong> Reach <strong>20,000 renown</strong> with at least <strong>6</strong> meerkats and <strong>40%+</strong> morale. <strong>Days</strong> cycle seasons on the veld; spend renown on <strong>traditions</strong>; <strong>outposts</strong> and <strong>events</strong> add long-term depth. Don’t overwork foragers.
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span class="ico" aria-hidden="true">🪱</span><div class="txt"><span>Grubs (§)</span><strong id="grubs">0</strong></div></div>
+    <div class="stat"><span class="ico" aria-hidden="true">🌾</span><div class="txt"><span>Food stores</span><strong id="food">0</strong></div></div>
+    <div class="stat"><span class="ico" aria-hidden="true">👥</span><div class="txt"><span>Mob size</span><strong id="pop">0</strong> / <span id="cap">0</span></div></div>
+    <div class="stat"><span class="ico" aria-hidden="true">⭐</span><div class="txt"><span>Renown</span><strong id="renown">0</strong></div></div>
+    <div class="stat"><span class="ico" aria-hidden="true">🏠</span><div class="txt"><span>Chambers</span><strong id="chambersN">1</strong></div></div>
+    <div class="stat"><span class="ico" aria-hidden="true">💧</span><div class="txt"><span>Water scrapes</span><strong id="waterN">0</strong></div></div>
+    <div class="stat"><span class="ico" aria-hidden="true">🛖</span><div class="txt"><span>Outposts</span><strong id="outpostN">0</strong></div></div>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <h2>Burrow & upgrades</h2>
+      <div class="action">
+        <p><strong>Dig chamber</strong> — +2 mob cap. Cost scales gently.</p>
+        <button type="button" id="dig">Dig</button>
+      </div>
+      <div class="action">
+        <p><strong>Welcome a pup</strong> — Needs space, grubs, and a little food.</p>
+        <button type="button" id="recruit">Recruit</button>
+      </div>
+      <div class="action">
+        <p><strong>Watering scrape</strong> — Foragers find more grubs per shift.</p>
+        <button type="button" id="water">Upgrade</button>
+      </div>
+      <div class="action">
+        <p><strong>Toolkit cache</strong> — +8% grub efficiency (stacks).</p>
+        <button type="button" id="tools">Buy tools</button>
+      </div>
+      <div class="action">
+        <p><strong>Stock roots &amp; berries</strong> — Trade grubs for larder food (instant).</p>
+        <button type="button" id="buyFood">Stock food</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Shift assignments</h2>
+      <p style="margin: 0 0 10px; font-size: 0.88rem;">Distribute your mob (must sum to population). <strong>Foragers</strong> gather <strong>food</strong> and <strong>grubs</strong>; <strong>sentries</strong> cut tension; <strong>resters</strong> heal morale. If foragers are most of the mob for too long, <strong>fatigue</strong> bites.</p>
+      <div class="row-assign">
+        <label>Foragers</label>
+        <input type="range" id="rngForage" min="0" max="0" value="0" />
+        <span class="val" id="vForage">0</span>
+      </div>
+      <div class="row-assign">
+        <label>Sentries</label>
+        <input type="range" id="rngSentry" min="0" max="0" value="0" />
+        <span class="val" id="vSentry">0</span>
+      </div>
+      <div class="row-assign">
+        <label>Resters</label>
+        <input type="range" id="rngRest" min="0" max="0" value="0" />
+        <span class="val" id="vRest">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panels depth-panels" style="margin-top:14px;">
+    <div class="panel">
+      <h2>Season &amp; strain</h2>
+      <p style="margin:0 0 8px;font-size:0.88rem;line-height:1.45;" id="seasonBlurb">Each new day rotates the veld: dry, green, lean, or bloom—changing hunger, finds, and how bold predators feel.</p>
+      <p style="margin:0;font-size:0.88rem;" id="fatigueLine">Forager strain: <span id="fatigueState">steady</span></p>
+    </div>
+    <div class="panel" id="tradPanel">
+      <h2>Mob traditions</h2>
+      <p style="margin:0 0 10px;font-size:0.85rem;">Spend <strong>renown</strong> once each to etch customs into the mob’s memory.</p>
+      <div class="action" id="tradRow1">
+        <p><strong>Granaryways</strong> — +18% larder capacity.</p>
+        <button type="button" id="trad1">22 ★</button>
+      </div>
+      <div class="action" id="tradRow2">
+        <p><strong>Double-watch songs</strong> — sentries calm tension ~12% more.</p>
+        <button type="button" id="trad2">38 ★</button>
+      </div>
+      <div class="action" id="tradRow3">
+        <p><strong>Dig-lore</strong> — foragers bring ~10% more grubs &amp; food.</p>
+        <button type="button" id="trad3">55 ★</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Territory</h2>
+      <p style="margin:0 0 10px;font-size:0.88rem;">Remote <strong>outposts</strong> spot allies and trade—steady renown trickle (max 3).</p>
+      <div class="action">
+        <p id="outpostBlurb">Build a lookout mound on the next ridge.</p>
+        <button type="button" id="outpostBtn">Build</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="log" id="log" aria-live="polite"></div>
+
+  <script>
+(function () {
+  const TICK_MS = 2600;
+  const GOAL_RENOWN = 20000;
+  const GOAL_POP = 6;
+  const WIN_MORALE = 40;
+
+  let s = {
+    day: 1,
+    tickInDay: 0,
+    ticksPerDay: 14,
+    grubs: 48,
+    food: 28,
+    pop: 4,
+    cap: 10,
+    morale: 88,
+    predator: 5,
+    renown: 0,
+    chambers: 1,
+    water: 0,
+    toolStacks: 0,
+    forage: 2,
+    sentry: 1,
+    paused: false,
+    speed: 1,
+    won: false,
+    lost: false,
+    hungerStreak: 0,
+    foodBuys: 0,
+    tradGranary: false,
+    tradWatch: false,
+    tradDig: false,
+    outpost: 0,
+    foragePressure: 0,
+    eventIn: 9,
+  };
+
+  const el = (id) => document.getElementById(id);
+  const logEl = el("log");
+  const mobStrip = el("mobStrip");
+  const burrowMarkers = el("burrowMarkers");
+  const jackalG = el("jackalG");
+  let logLines = [];
+
+  function log(msg, cls) {
+    const line = document.createElement("div");
+    line.className = cls || "";
+    line.textContent = `[Day ${s.day}] ${msg}`;
+    logEl.insertBefore(line, logEl.firstChild);
+    logLines.unshift(line);
+    if (logLines.length > 36) logLines.pop().remove();
+  }
+
+  function syncAssignMax() {
+    const m = s.pop;
+    ["rngForage", "rngSentry", "rngRest"].forEach((id) => {
+      el(id).max = m;
+    });
+    let f = +el("rngForage").value, se = +el("rngSentry").value, r = +el("rngRest").value;
+    if (f + se + r !== m) {
+      f = Math.min(f, m);
+      se = Math.min(se, m - f);
+      r = m - f - se;
+      if (r < 0) { r = 0; se = m - f; }
+      el("rngForage").value = f;
+      el("rngSentry").value = se;
+      el("rngRest").value = r;
+    }
+    s.forage = f;
+    s.sentry = se;
+    el("vForage").textContent = f;
+    el("vSentry").textContent = se;
+    el("vRest").textContent = +el("rngRest").value;
+  }
+
+  function onAssignChange(changed) {
+    const m = s.pop;
+    let f = +el("rngForage").value;
+    let se = +el("rngSentry").value;
+    let r = +el("rngRest").value;
+    if (changed === "forage") {
+      const maxSe = m - f;
+      se = Math.min(se, maxSe);
+      el("rngSentry").value = se;
+      r = m - f - se;
+      el("rngRest").value = r;
+    } else if (changed === "sentry") {
+      const maxF = m - se;
+      f = Math.min(f, maxF);
+      el("rngForage").value = f;
+      r = m - f - se;
+      el("rngRest").value = r;
+    } else {
+      const maxF = m - r;
+      f = Math.min(f, maxF);
+      el("rngForage").value = f;
+      se = m - f - r;
+      el("rngSentry").value = se;
+    }
+    s.forage = +el("rngForage").value;
+    s.sentry = +el("rngSentry").value;
+    el("vForage").textContent = s.forage;
+    el("vSentry").textContent = s.sentry;
+    el("vRest").textContent = +el("rngRest").value;
+  }
+
+  el("rngForage").addEventListener("input", () => onAssignChange("forage"));
+  el("rngSentry").addEventListener("input", () => onAssignChange("sentry"));
+  el("rngRest").addEventListener("input", () => onAssignChange("rest"));
+
+  function toolMult() {
+    return 1 + s.toolStacks * 0.08;
+  }
+
+  function digCost() {
+    return 12 + s.chambers * 14;
+  }
+
+  function recruitCostGrubs() {
+    return 6 + s.pop * 2;
+  }
+
+  function recruitCostNow() {
+    let c = recruitCostGrubs();
+    if (seasonKey() === 1) c = Math.max(4, Math.floor(c * 0.88));
+    return c;
+  }
+
+  function waterCost() {
+    return 20 + s.water * 16;
+  }
+
+  function toolsCost() {
+    return 24 + s.toolStacks * 20;
+  }
+
+  function buyFoodCost() {
+    return 10 + s.foodBuys * 3;
+  }
+
+  function foodCap() {
+    let c = s.pop * 14 + s.chambers * 8 + 20;
+    if (s.tradGranary) c *= 1.18;
+    return c;
+  }
+
+  function seasonKey() {
+    return ((s.day - 1) % 4 + 4) % 4;
+  }
+
+  const SEASONS = [
+    { name: "Dry winds", short: "Dry", foodNeed: 1.14, foodFind: 0.92, grubFind: 0.95, pred: 0.35, blurb: "Heat bakes the soil — everyone eats a bit more; finds are thinner." },
+    { name: "Green belt", short: "Green", foodNeed: 0.94, foodFind: 1.22, grubFind: 1.12, pred: -0.25, blurb: "Shoots after rain — great foraging, lighter hunger, calmer skies." },
+    { name: "Lean moon", short: "Lean", foodNeed: 1.08, foodFind: 0.98, grubFind: 0.98, pred: 0.42, blurb: "Pickings are honest; predators prowl with a bit more confidence." },
+    { name: "Bloom", short: "Bloom", foodNeed: 1, foodFind: 1.1, grubFind: 1.06, pred: -0.15, blurb: "Seeds and insects spike — balanced bounty for the mob." },
+  ];
+
+  function traditionGrubFoodMult() {
+    return s.tradDig ? 1.1 : 1;
+  }
+
+  function traditionSentryMult() {
+    return s.tradWatch ? 1.12 : 1;
+  }
+
+  function colonyTier() {
+    if (s.pop >= 10) return { name: "Dynasty", mult: 1.15 };
+    if (s.pop >= 6) return { name: "Clan", mult: 1.08 };
+    return { name: "Band", mult: 1 };
+  }
+
+  function maybeEvent() {
+    if (s.won || s.lost) return;
+    s.eventIn--;
+    if (s.eventIn > 0) return;
+    s.eventIn = 9 + (Math.random() * 9) | 0;
+    const roll = Math.random();
+    if (roll < 0.22) {
+      const f = 7 + (Math.random() * 10) | 0;
+      s.food = Math.min(foodCap(), s.food + f);
+      log(`Locust drift! The mob feasts — +${f} food.`, "good");
+    } else if (roll < 0.38) {
+      const hit = 12 + (Math.random() * 10) | 0;
+      if (s.grubs >= hit) {
+        s.grubs -= hit;
+        log(`Snake in a side tunnel — lost ${hit} grubs dragging it out.`, "bad");
+      } else {
+        s.morale -= 10;
+        log("Snake in the burrow! Panic costs morale.", "bad");
+      }
+    } else if (roll < 0.52) {
+      s.predator += 18;
+      if (s.sentry >= 2) {
+        s.predator -= 10;
+        log("Eagle shadow — sentries flatten the mob in time.", "good");
+      } else {
+        log("Eagle circles low — tension spikes!", "bad");
+      }
+      s.predator = Math.max(0, Math.min(100, s.predator));
+    } else if (roll < 0.66) {
+      if (s.grubs >= 14) {
+        s.grubs -= 14;
+        s.food = Math.min(foodCap(), s.food + 9);
+        s.renown += 2.5;
+        log("Desert mice traders — swapped grubs for roots and gossip.", "good");
+      } else {
+        s.renown += 1.2;
+        log("A shy tortoise mob waves from the next dune — small renown.", "good");
+      }
+    } else if (roll < 0.78) {
+      s.grubs += 8 + (Math.random() * 7) | 0;
+      log("After-rain beetle surge — easy grubs!", "good");
+    } else {
+      s.renown += 3 + s.outpost * 1.2;
+      log("Your call carries — neighboring pups repeat your stories.", "good");
+    }
+  }
+
+  function outpostCost() {
+    return 62 + s.outpost * 48;
+  }
+
+  function updateButtons() {
+    const fc = buyFoodCost();
+    el("dig").disabled = s.grubs < digCost() || s.won || s.lost;
+    el("recruit").disabled =
+      s.grubs < recruitCostNow() || s.food < 2 || s.pop >= s.cap || s.won || s.lost;
+    el("water").disabled = s.grubs < waterCost() || s.won || s.lost;
+    el("tools").disabled = s.grubs < toolsCost() || s.won || s.lost;
+    el("buyFood").disabled = s.grubs < fc || s.food >= foodCap() || s.won || s.lost;
+    el("outpostBtn").disabled = s.grubs < outpostCost() || s.outpost >= 3 || s.won || s.lost;
+    el("dig").textContent = `Dig (${digCost()}§)`;
+    el("recruit").textContent = `Recruit (${recruitCostNow()}§ + 2 food)`;
+    el("water").textContent = `Upgrade (${waterCost()}§)`;
+    el("tools").textContent = `Tools (${toolsCost()}§)`;
+    el("buyFood").textContent = `Stock (+${Math.floor(fc * 0.85)} 🌾, ${fc}§)`;
+    el("outpostBtn").textContent = s.outpost >= 3 ? "Max outposts" : `Build (${outpostCost()}§)`;
+    el("trad1").disabled = s.tradGranary || s.renown < 22 || s.won || s.lost;
+    el("trad2").disabled = s.tradWatch || s.renown < 38 || s.won || s.lost;
+    el("trad3").disabled = s.tradDig || s.renown < 55 || s.won || s.lost;
+    el("tradRow1").classList.toggle("trad-taken", s.tradGranary);
+    el("tradRow2").classList.toggle("trad-taken", s.tradWatch);
+    el("tradRow3").classList.toggle("trad-taken", s.tradDig);
+    el("trad1").textContent = s.tradGranary ? "Learned" : "22 ★";
+    el("trad2").textContent = s.tradWatch ? "Learned" : "38 ★";
+    el("trad3").textContent = s.tradDig ? "Learned" : "55 ★";
+  }
+
+  function drawBurrowHoles() {
+    burrowMarkers.innerHTML = "";
+    for (let i = 0; i < s.chambers; i++) {
+      const cx = 68 + (i % 5) * 52 + ((i / 5) | 0) * 18;
+      const cy = 99 + ((i / 5) | 0) * 5;
+      const ell = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+      ell.setAttribute("cx", String(cx));
+      ell.setAttribute("cy", String(cy));
+      ell.setAttribute("rx", String(11));
+      ell.setAttribute("ry", String(5));
+      ell.setAttribute("fill", "#3d291f");
+      ell.setAttribute("opacity", String(0.38 + (i % 4) * 0.06));
+      burrowMarkers.appendChild(ell);
+      const hole = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+      hole.setAttribute("cx", String(cx));
+      hole.setAttribute("cy", String(cy - 1));
+      hole.setAttribute("rx", "4");
+      hole.setAttribute("ry", "2");
+      hole.setAttribute("fill", "#1a1210");
+      hole.setAttribute("opacity", "0.55");
+      burrowMarkers.appendChild(hole);
+    }
+  }
+
+  function drawMob() {
+    mobStrip.innerHTML = "";
+    const f = s.forage, se = s.sentry;
+    const show = Math.min(s.pop, 14);
+    let fi = 0, sei = 0;
+    for (let i = 0; i < show; i++) {
+      let role;
+      if (fi < f) {
+        fi++;
+        role = "forage";
+      } else if (sei < se) {
+        sei++;
+        role = "sentry";
+      } else {
+        role = "rest";
+      }
+      const d = document.createElement("div");
+      d.className = "mkat " + role;
+      d.innerHTML = '<span class="tail"></span><span class="bod"></span><span class="head"><span class="ear l"></span><span class="ear r"></span><span class="eye l"></span><span class="eye r"></span></span>';
+      d.title = role === "sentry" ? "Sentry" : role === "forage" ? "Forager" : "Resting";
+      mobStrip.appendChild(d);
+    }
+    if (s.pop > show) {
+      const more = document.createElement("span");
+      more.className = "mkat-more";
+      more.textContent = "+" + (s.pop - show);
+      mobStrip.appendChild(more);
+    }
+  }
+
+  function render() {
+    el("day").textContent = s.day;
+    el("grubs").textContent = Math.floor(s.grubs);
+    el("food").textContent = Math.floor(s.food);
+    el("pop").textContent = s.pop;
+    el("cap").textContent = s.cap;
+    el("renown").textContent = Math.floor(s.renown).toLocaleString();
+    el("chambersN").textContent = s.chambers;
+    el("waterN").textContent = s.water;
+    el("outpostN").textContent = s.outpost;
+
+    const se = SEASONS[seasonKey()];
+    el("seasonBadge").innerHTML = `${se.short} season<small>${se.name}</small>`;
+    el("seasonBlurb").textContent = se.blurb;
+    const tier = colonyTier();
+    el("tierLabel").textContent = tier.name;
+    if (s.foragePressure >= 5) {
+      el("fatigueState").innerHTML = '<span class="fatigue-warn">Tired diggers — add resters or lose morale</span>';
+    } else if (s.foragePressure >= 3) {
+      el("fatigueState").textContent = "Working hard (watch ratios)";
+    } else {
+      el("fatigueState").textContent = "Steady";
+    }
+    if (s.outpost >= 3) el("outpostBlurb").textContent = "Three ridges report in — maximum network.";
+    else el("outpostBlurb").textContent = `Outpost ${s.outpost + 1}/3: scouts trade news for ~${(0.18 * (s.outpost + 1)).toFixed(2)} ★/tick when built.`;
+
+    el("barMorale").style.width = s.morale + "%";
+    el("barPred").style.width = s.predator + "%";
+    const renW = Math.min(100, (s.renown / GOAL_RENOWN) * 100);
+    el("barRenown").style.width = renW + "%";
+    el("moralePct").textContent = Math.round(s.morale) + "%";
+    el("predPct").textContent = Math.round(s.predator) + "%";
+    el("renownPct").textContent =
+      Math.floor(s.renown).toLocaleString() + " / " + GOAL_RENOWN.toLocaleString();
+
+    jackalG.setAttribute("opacity", String(Math.min(0.92, Math.max(0, (s.predator - 35) / 65))));
+
+    drawBurrowHoles();
+    drawMob();
+    syncAssignMax();
+    updateButtons();
+    if (s.won) el("goal").innerHTML = "<strong>You did it!</strong> The mob is legendary. <kbd>New colony</kbd> to play again.";
+    else if (s.lost) el("goal").innerHTML = "<strong>Colony scattered.</strong> Morale collapsed or hunger went on too long. Try again!";
+  }
+
+  function tick() {
+    if (s.paused || s.won || s.lost) return;
+
+    const se = SEASONS[seasonKey()];
+    const tier = colonyTier();
+    const rest = s.pop - s.forage - s.sentry;
+    const foodNeed = s.pop * 0.26 * se.foodNeed;
+    s.food -= foodNeed;
+    const tgf = traditionGrubFoodMult();
+    const foodFromForage =
+      s.forage * (0.45 + s.water * 0.1) * toolMult() * se.foodFind * tgf;
+    s.food += foodFromForage;
+    s.food = Math.min(s.food, foodCap());
+    const grubBase =
+      s.forage * (1.38 + s.water * 0.24) * toolMult() * se.grubFind * tgf;
+    s.grubs += grubBase + Math.random() * 0.65;
+
+    const ratio = s.pop ? s.forage / s.pop : 0;
+    if (ratio >= 0.62) s.foragePressure++;
+    else s.foragePressure = Math.max(0, s.foragePressure - 2);
+    if (s.foragePressure >= 5) s.morale -= 2.2;
+
+    const sentryPower = s.pop ? (s.sentry / s.pop) * 52 * traditionSentryMult() : 0;
+    let predDelta = 2.2 - sentryPower + (s.morale < 35 ? 2 : 0) + se.pred;
+    s.predator += predDelta;
+    s.predator = Math.max(0, Math.min(100, s.predator));
+
+    if (rest > 0) s.morale += rest * 2.4 + (s.food > s.pop * 0.8 ? 2.5 : 0);
+    if (s.food < s.pop * 0.6) s.morale -= 3.5;
+    if (s.food < 0) s.morale -= 7;
+    s.morale = Math.max(0, Math.min(100, s.morale));
+
+    if (s.food < 0) s.food = 0;
+
+    if (s.food <= 0.01 && s.pop > 0) s.hungerStreak++;
+    else s.hungerStreak = 0;
+
+    if (s.predator > 92 && Math.random() < 0.18) {
+      const loss = 4 + Math.random() * 9;
+      s.grubs = Math.max(0, s.grubs - loss);
+      s.predator -= 28;
+      log(`Jackal probe! Lost ${loss.toFixed(0)} grubs — mob drove it off.`, "bad");
+    }
+
+    if (s.morale > 58 && s.predator < 62 && Math.random() < 0.22) {
+      s.renown += (2.6 + s.pop * 0.36) * tier.mult;
+      log("Neighboring mob sends respect — renown up.", "good");
+    }
+
+    if (s.morale > 70) s.renown += 0.34 * (s.pop / 4) * tier.mult;
+    if (s.predator < 30) s.renown += 0.2 * tier.mult;
+    s.renown += s.outpost * 0.18 * tier.mult;
+
+    maybeEvent();
+
+    if (s.morale <= 0 || s.hungerStreak >= 14) {
+      s.lost = true;
+      log("The colony disperses…", "bad");
+    }
+
+    if (s.renown >= GOAL_RENOWN && s.pop >= GOAL_POP && s.morale >= WIN_MORALE) {
+      s.won = true;
+      log("Legend status! Every burrow knows your sentinel mound.", "good");
+    }
+
+    s.tickInDay++;
+    if (s.tickInDay >= s.ticksPerDay) {
+      s.tickInDay = 0;
+      s.day++;
+      const n = SEASONS[seasonKey()];
+      log(`Sunrise — ${n.name}. ${n.blurb}`, "good");
+    }
+
+    render();
+  }
+
+  el("dig").addEventListener("click", () => {
+    const c = digCost();
+    if (s.grubs < c) return;
+    s.grubs -= c;
+    s.chambers++;
+    s.cap += 2;
+    log(`New chamber dug — cap now ${s.cap}.`);
+    render();
+  });
+
+  el("recruit").addEventListener("click", () => {
+    const c = recruitCostNow();
+    if (s.grubs < c || s.food < 2 || s.pop >= s.cap) return;
+    s.grubs -= c;
+    s.food -= 2;
+    s.pop++;
+    el("rngRest").value = +el("rngRest").value + 1;
+    onAssignChange("rest");
+    log("A pup joins the mob!");
+    render();
+  });
+
+  el("water").addEventListener("click", () => {
+    const c = waterCost();
+    if (s.grubs < c) return;
+    s.grubs -= c;
+    s.water++;
+    log(`Watering scrape ${s.water} — foragers cheer.`);
+    render();
+  });
+
+  el("tools").addEventListener("click", () => {
+    const c = toolsCost();
+    if (s.grubs < c) return;
+    s.grubs -= c;
+    s.toolStacks++;
+    log("Sharper claws, quicker digs.");
+    render();
+  });
+
+  el("buyFood").addEventListener("click", () => {
+    const c = buyFoodCost();
+    if (s.grubs < c || s.food >= foodCap()) return;
+    s.grubs -= c;
+    const gain = Math.floor(c * 0.85) + 2;
+    s.food = Math.min(foodCap(), s.food + gain);
+    s.foodBuys++;
+    log(`Traded grubs for roots — +${gain} food in the larder.`);
+    render();
+  });
+
+  el("trad1").addEventListener("click", () => {
+    if (s.tradGranary || s.renown < 22) return;
+    s.renown -= 22;
+    s.tradGranary = true;
+    log("Custom etched: Granaryways — the larder runs deeper.", "good");
+    render();
+  });
+  el("trad2").addEventListener("click", () => {
+    if (s.tradWatch || s.renown < 38) return;
+    s.renown -= 38;
+    s.tradWatch = true;
+    log("Custom etched: Double-watch songs echo at dusk.", "good");
+    render();
+  });
+  el("trad3").addEventListener("click", () => {
+    if (s.tradDig || s.renown < 55) return;
+    s.renown -= 55;
+    s.tradDig = true;
+    log("Custom etched: Dig-lore passes paw to paw.", "good");
+    render();
+  });
+
+  el("outpostBtn").addEventListener("click", () => {
+    const c = outpostCost();
+    if (s.grubs < c || s.outpost >= 3) return;
+    s.grubs -= c;
+    s.outpost++;
+    log(`Outpost ${s.outpost} raised — distant dunes report in.`, "good");
+    render();
+  });
+
+  el("btnPause").addEventListener("click", () => {
+    s.paused = !s.paused;
+    el("btnPause").textContent = s.paused ? "Resume" : "Pause";
+  });
+
+  el("btnSpeed").addEventListener("click", () => {
+    s.speed = s.speed === 1 ? 2 : s.speed === 2 ? 3 : 1;
+    el("btnSpeed").textContent = `Speed: ${s.speed}×`;
+    clearInterval(timer);
+    timer = setInterval(tick, TICK_MS / s.speed);
+  });
+
+  function defaultGoalHtml() {
+    return "<strong>Goal:</strong> Reach <strong>20,000 renown</strong> with at least <strong>6</strong> meerkats and <strong>40%+</strong> morale. <strong>Days</strong> rotate seasons; spend <strong>renown</strong> on <strong>traditions</strong>; build <strong>outposts</strong>; expect <strong>random veld events</strong>.";
+  }
+
+  el("btnReset").addEventListener("click", () => {
+    s = {
+      day: 1,
+      tickInDay: 0,
+      ticksPerDay: 14,
+      grubs: 48,
+      food: 28,
+      pop: 4,
+      cap: 10,
+      morale: 88,
+      predator: 5,
+      renown: 0,
+      chambers: 1,
+      water: 0,
+      toolStacks: 0,
+      forage: 2,
+      sentry: 1,
+      paused: false,
+      speed: 1,
+      won: false,
+      lost: false,
+      hungerStreak: 0,
+      foodBuys: 0,
+      tradGranary: false,
+      tradWatch: false,
+      tradDig: false,
+      outpost: 0,
+      foragePressure: 0,
+      eventIn: 9,
+    };
+    el("rngForage").value = 2;
+    el("rngSentry").value = 1;
+    el("rngRest").value = 1;
+    logEl.innerHTML = "";
+    logLines = [];
+    log("Fresh scrape under the morning sun — your colony awakens.", "good");
+    el("goal").innerHTML = defaultGoalHtml();
+    el("btnPause").textContent = "Pause";
+    el("btnSpeed").textContent = "Speed: 1×";
+    clearInterval(timer);
+    timer = setInterval(tick, TICK_MS);
+    render();
+  });
+
+  log("Fresh scrape under the morning sun — your colony awakens.", "good");
+  el("rngForage").value = 2;
+  el("rngSentry").value = 1;
+  el("rngRest").value = 1;
+  let timer = setInterval(tick, TICK_MS);
+  render();
+})();
+  </script>
+</body>
+</html>
