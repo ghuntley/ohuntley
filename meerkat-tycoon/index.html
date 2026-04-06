@@ -506,6 +506,7 @@
   <div class="log" id="log" aria-live="polite"></div>
 
   <script src="../arcade-tokens.js"></script>
+  <script src="../arcade-scores.js"></script>
   <script>
 (function () {
   const TICK_MS = 2600;
@@ -551,6 +552,12 @@
   let logLines = [];
 
   function awardArcadeTokens(score) {
+    const AS = globalThis.ArcadeScores;
+    const n = Math.floor(Number(score));
+    if (AS && typeof AS.record === "function" && Number.isFinite(n)) {
+      AS.record("meerkat-tycoon", n);
+      return;
+    }
     const AT = globalThis.ArcadeTokens;
     if (AT && typeof AT.earnFromGameScore === "function") {
       AT.earnFromGameScore("meerkat-tycoon", score);

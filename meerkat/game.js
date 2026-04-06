@@ -694,9 +694,14 @@ class MeerkatChaseGame {
       saveHighScore(CONFIG.highScoreStorageKey, s);
       this._newHighScore = true;
     }
-    const AT = globalThis.ArcadeTokens;
-    if (typeof AT !== "undefined" && AT.earnFromGameScore) {
-      AT.earnFromGameScore("meerkat", s);
+    const AS = globalThis.ArcadeScores;
+    if (typeof AS !== "undefined" && typeof AS.record === "function") {
+      AS.record("meerkat", s);
+    } else {
+      const AT = globalThis.ArcadeTokens;
+      if (typeof AT !== "undefined" && AT.earnFromGameScore) {
+        AT.earnFromGameScore("meerkat", s);
+      }
     }
   }
 

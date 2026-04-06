@@ -27,10 +27,24 @@
       z-index: 0;
     }
 
+    @keyframes blockerWash {
+      0%, 100% {
+        box-shadow:
+          inset 0 0 70px rgba(255, 20, 147, 0.07),
+          inset 0 0 140px rgba(0, 255, 238, 0.04);
+      }
+      50% {
+        box-shadow:
+          inset 0 0 110px rgba(255, 20, 147, 0.11),
+          inset 0 0 180px rgba(0, 255, 238, 0.07);
+      }
+    }
+
     #blocker {
       position: fixed;
       inset: 0;
       z-index: 10;
+      touch-action: manipulation;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -38,7 +52,16 @@
       background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255, 0, 128, 0.12), transparent 55%),
         radial-gradient(ellipse 60% 50% at 20% 70%, rgba(0, 255, 255, 0.06), transparent 45%),
         rgba(8, 6, 14, 0.88);
+      box-shadow:
+        inset 0 0 80px rgba(255, 20, 147, 0.08),
+        inset 0 0 160px rgba(0, 255, 238, 0.05);
       cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      #blocker {
+        animation: blockerWash 7s ease-in-out infinite;
+      }
     }
 
     #blocker h1 {
@@ -207,6 +230,73 @@
       pointer-events: auto;
     }
 
+    #arcade-use-btn {
+      position: fixed;
+      bottom: 3.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 11;
+      padding: 0.55rem 1.1rem;
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(0.38rem, 2.2vw, 0.52rem);
+      line-height: 1.6;
+      letter-spacing: 0.06em;
+      color: #ffb74d;
+      text-shadow: 0 0 10px rgba(255, 183, 77, 0.85);
+      cursor: pointer;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 183, 77, 0.55);
+      background: rgba(10, 8, 24, 0.82);
+      box-shadow:
+        0 0 14px rgba(255, 20, 147, 0.35),
+        inset 0 0 12px rgba(255, 183, 77, 0.08);
+      touch-action: manipulation;
+      user-select: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s, transform 0.08s;
+    }
+
+    #arcade-use-btn:active {
+      transform: translateX(-50%) scale(0.96);
+    }
+
+    body.locked #arcade-use-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #arcade-use-btn:disabled {
+      opacity: 0.35;
+      pointer-events: none;
+      cursor: default;
+    }
+
+    #arcade-touch-exit {
+      position: fixed;
+      top: 3.45rem;
+      left: 0.55rem;
+      z-index: 11;
+      padding: 0.45rem 0.75rem;
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(0.32rem, 1.8vw, 0.45rem);
+      line-height: 1.5;
+      letter-spacing: 0.04em;
+      color: #e1bee7;
+      text-shadow: 0 0 8px rgba(225, 190, 231, 0.6);
+      cursor: pointer;
+      border-radius: 8px;
+      border: 2px solid rgba(186, 104, 200, 0.5);
+      background: rgba(10, 8, 24, 0.88);
+      touch-action: manipulation;
+      user-select: none;
+      display: none;
+    }
+
+    body.locked.touch-play-mode #arcade-touch-exit {
+      display: block;
+    }
+
     #hint {
       position: fixed;
       bottom: 0.75rem;
@@ -219,6 +309,21 @@
       max-width: 48ch;
       padding: 0 0.5rem;
       pointer-events: none;
+    }
+
+    @keyframes tokenBarGlow {
+      0%, 100% {
+        box-shadow:
+          0 0 14px rgba(255, 20, 147, 0.35),
+          0 0 22px rgba(0, 255, 238, 0.12),
+          inset 0 0 20px rgba(255, 20, 147, 0.04);
+      }
+      50% {
+        box-shadow:
+          0 0 22px rgba(255, 20, 147, 0.5),
+          0 0 32px rgba(0, 255, 238, 0.2),
+          inset 0 0 24px rgba(0, 255, 238, 0.06);
+      }
     }
 
     #token-bar {
@@ -241,6 +346,12 @@
       color: #ffe082;
       text-shadow: 0 0 10px rgba(255, 193, 7, 0.55);
       pointer-events: auto;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      body.locked #token-bar {
+        animation: tokenBarGlow 4.5s ease-in-out infinite;
+      }
     }
 
     #token-bar .token-icon {
@@ -515,6 +626,13 @@
         marquee: "#d4a03a",
         screen: "#e8c088",
       },
+      {
+        slug: "grapple",
+        title: "SKYHOOK",
+        blurb: "Three.js grapple · swing to the gold platform",
+        marquee: "#00fff2",
+        screen: "#ff1493",
+      },
     ];
   </script>
 </head>
@@ -567,8 +685,11 @@
   <div id="crosshair" aria-hidden="true"></div>
   <p id="hud-prompt" role="status" aria-live="polite"></p>
   <button type="button" id="arcade-jump-btn" aria-label="Jump">Jump</button>
+  <button type="button" id="arcade-use-btn" aria-label="Use or play" disabled>Use</button>
+  <button type="button" id="arcade-touch-exit">Lobby</button>
   <p id="hint"></p>
   <script src="./arcade-tokens.js"></script>
+  <script src="./arcade-scores.js"></script>
   <script type="module" src="./arcade-3d.js"></script>
 </body>
 </html>

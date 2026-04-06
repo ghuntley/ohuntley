@@ -497,6 +497,8 @@ function checkWin() {
     const currentCol = Math.floor(player.x / cellSize);
 
     if (currentRow === rows-2 && currentCol === cols-2) {
+        const winTimeSeconds = Math.floor((Date.now() - startTime) / 1000);
+
         // Increment level
         currentLevel++;
 
@@ -509,6 +511,13 @@ function checkWin() {
         // Reset player to start position
         player.x = cellSize;
         player.y = cellSize;
+
+        // Per-level timer for the next maze
+        startTime = Date.now();
+        elapsedTime = 0;
+        timerElement.textContent = '0';
+        currentScore = calculateScore(0);
+        currentScoreElement.textContent = currentScore;
 
         // Update display
         drawMaze();
@@ -524,7 +533,7 @@ function checkWin() {
         ctx.fillText(`Starting Level ${currentLevel}`, canvas.width / 2, canvas.height / 2 + 20);
         setTimeout(() => drawMaze(), 1500);
 
-        return true;
+        return winTimeSeconds;
     }
     return false;
 }
@@ -536,10 +545,10 @@ function calculateScore(timeSeconds) {
     return Math.max(0, Math.floor((baseScore - timeDeduction) * (mazeComplexity / 100)));
 }
 
-function updateHighScores(newScore) {
+function updateHighScores(newScore, timeSeconds = elapsedTime) {
     highScores.push({
         score: newScore,
-        time: elapsedTime,
+        time: timeSeconds,
         date: new Date().toLocaleDateString()
     });
 
@@ -549,6 +558,10 @@ function updateHighScores(newScore) {
 
     // Save to localStorage
     localStorage.setItem('mazeRunnerHighScores', JSON.stringify(highScores));
+
+    if (typeof ArcadeScores !== "undefined" && typeof ArcadeScores.record === "function") {
+      ArcadeScores.record("maze", newScore);
+    }
 
     // Update display
     displayHighScores();
@@ -682,13 +695,16 @@ function movePlayer(e) {
         player.x = newX;
         player.y = newY;
 
-        if (checkWin()) {
-            const finalScore = calculateScore(elapsedTime);
-            updateHighScores(finalScore);
-            if (typeof ArcadeTokens !== "undefined" && ArcadeTokens.earnFromGameScore) {
-                ArcadeTokens.earnFromGameScore("maze", finalScore);
+        const winTime = checkWin();
+        if (winTime !== false) {
+            const finalScore = calculateScore(winTime);
+            updateHighScores(finalScore, winTime);
+            if (typeof ArcadeScores === "undefined" || typeof ArcadeScores.record !== "function") {
+                if (typeof ArcadeTokens !== "undefined" && ArcadeTokens.earnFromGameScore) {
+                    ArcadeTokens.earnFromGameScore("maze", finalScore);
+                }
             }
-            showMazeToast(`You cleared the maze in ${elapsedTime}s — nice run! (click to dismiss)`);
+            showMazeToast(`You cleared the maze in ${winTime}s — nice run! (click to dismiss)`);
         }
     }
 

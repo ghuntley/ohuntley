@@ -27,6 +27,13 @@ const DEFAULT_GAMES = [
     marquee: "#d4a03a",
     screen: "#e8c088",
   },
+  {
+    slug: "grapple",
+    title: "SKYHOOK",
+    blurb: "Three.js grapple · swing to the gold platform",
+    marquee: "#00fff2",
+    screen: "#ff1493",
+  },
 ];
 
 function getGames() {
@@ -287,13 +294,70 @@ function makePopMuralTexture(variant) {
   return tex;
 }
 
-function makeBackScoreboardTexture() {
-  const w = 640;
-  const h = 340;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
+function readMazeBestLegacy() {
+  try {
+    const raw = localStorage.getItem("mazeRunnerHighScores");
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr) || !arr.length) return null;
+    let best = -Infinity;
+    for (const r of arr) {
+      const n = Number(r?.score);
+      if (Number.isFinite(n)) best = Math.max(best, n);
+    }
+    return best >= 0 && Number.isFinite(best) ? best : null;
+  } catch {
+    return null;
+  }
+}
+
+function readMeerkatBestLegacy() {
+  const n = parseInt(localStorage.getItem("meerkat-chase-highscore-v1") || "", 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+function readArcadeLeaderboardTop(slug, lowerIsBetter) {
+  const AS = typeof window !== "undefined" ? window.ArcadeScores : null;
+  if (!AS?.list) return null;
+  const rows = AS.list(slug, !!lowerIsBetter);
+  const top = rows[0];
+  if (!top || !Number.isFinite(top.score)) return null;
+  return top.score;
+}
+
+function bestScoreForGameSlug(slug) {
+  const fromLb = readArcadeLeaderboardTop(slug, false);
+  if (fromLb != null) return fromLb;
+  if (slug === "maze") return readMazeBestLegacy();
+  if (slug === "meerkat") return readMeerkatBestLegacy();
+  return null;
+}
+
+function shortTitleForScoreboard(title) {
+  const u = String(title).toUpperCase();
+  if (u.includes("MAZE")) return "MAZE";
+  if (u.includes("MANOR")) return "MANOR";
+  if (u.includes("MEERKAT") && u.includes("RUN")) return "MEERKAT";
+  if (u.includes("MEERKAT")) return "MEERKAT";
+  const t = u.replace(/[^A-Z0-9]+/g, " ").trim();
+  return t.slice(0, 10) || "GAME";
+}
+
+function formatScoreboardNumber(n) {
+  if (n == null || !Number.isFinite(n)) return "   —   ";
+  const v = Math.max(0, Math.floor(n));
+  return String(Math.min(v, 99999)).padStart(5, "0");
+}
+
+function scoreboardRowsFromGames(games) {
+  const list = Array.isArray(games) ? games.slice(0, 5) : [];
+  return list.map((g) => ({
+    label: shortTitleForScoreboard(g.title || g.slug || "GAME"),
+    value: formatScoreboardNumber(bestScoreForGameSlug(g.slug)),
+  }));
+}
+
+function paintScoreboardOntoCanvas(ctx, w, h, rows) {
   ctx.fillStyle = "#050208";
   ctx.fillRect(0, 0, w, h);
   ctx.strokeStyle = "rgba(255, 20, 147, 0.75)";
@@ -308,40 +372,32 @@ function makeBackScoreboardTexture() {
   ctx.fillStyle = "#ff6eb4";
   ctx.shadowColor = "#ff1493";
   ctx.shadowBlur = 12;
-  ctx.fillText("◆ TODAY'S HOT SCORES ◆", w / 2, 52);
+  ctx.fillText("◆ ARCADE HIGH SCORES ◆", w / 2, 52);
   ctx.shadowBlur = 0;
 
-  const rows = [
-    ["MAZE", "08420"],
-    ["MEERKAT", "12288"],
-    ["MANOR", "05500"],
-  ];
-  ctx.font = "28px monospace";
+  const rowStep = rows.length > 4 ? 48 : 56;
+  ctx.font = rows.length > 4 ? "24px monospace" : "28px monospace";
   for (let i = 0; i < rows.length; i++) {
-    const y = 110 + i * 62;
+    const y = 102 + i * rowStep;
     ctx.fillStyle = "#7df9ff";
     ctx.textAlign = "left";
-    ctx.fillText(rows[i][0], 80, y);
+    ctx.fillText(rows[i].label, 72, y);
     ctx.fillStyle = "#c8ffc8";
     ctx.textAlign = "right";
-    ctx.fillText(rows[i][1], w - 80, y);
+    ctx.fillText(rows[i].value, w - 72, y);
     ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
     ctx.beginPath();
-    ctx.moveTo(60, y + 14);
-    ctx.lineTo(w - 60, y + 14);
+    ctx.moveTo(52, y + 14);
+    ctx.lineTo(w - 52, y + 14);
     ctx.stroke();
   }
 
   ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
   for (let i = 0; i < 400; i++) {
     const x = (i * 97) % w;
-    const y = (i * 53) % h;
-    ctx.fillRect(x, y, 2, 2);
+    const yy = (i * 53) % h;
+    ctx.fillRect(x, yy, 2, 2);
   }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
 }
 
 function addNeonTube(scene, ax, ay, az, len, axis, color, intensity = 1.35) {
@@ -897,9 +953,23 @@ function addWallMurals(scene, roomW, roomD, wallH) {
   }
 }
 
-function addBackWallScoreboard(scene, roomW, roomD, wallH) {
+function addBackWallScoreboard(scene, roomW, roomD, wallH, games) {
   const d = roomD / 2;
-  const tex = makeBackScoreboardTexture();
+  const cw = 640;
+  const ch = 340;
+  const canvas = document.createElement("canvas");
+  canvas.width = cw;
+  canvas.height = ch;
+  const ctx = canvas.getContext("2d");
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  const refreshScoreboard = () => {
+    paintScoreboardOntoCanvas(ctx, cw, ch, scoreboardRowsFromGames(games));
+    tex.needsUpdate = true;
+  };
+  refreshScoreboard();
+
   const mat = new THREE.MeshStandardMaterial({
     map: tex,
     emissive: 0xff1493,
@@ -957,6 +1027,108 @@ function addBackWallScoreboard(scene, roomW, roomD, wallH) {
     b.position.set(sx, wallH * 0.42, -d + 0.2);
     scene.add(b);
   }
+
+  return { refreshScoreboard };
+}
+
+/** Chase lights under the exit — materials returned for animate(). */
+function addFrontWallMarquee(scene, roomW, roomD, wallH) {
+  const d = roomD / 2;
+  const back = new THREE.Mesh(
+    new THREE.PlaneGeometry(roomW - 4.5, 0.28),
+    new THREE.MeshStandardMaterial({
+      color: 0x0a0610,
+      emissive: 0xff1493,
+      emissiveIntensity: 0.04,
+      roughness: 0.92,
+      metalness: 0.05,
+    })
+  );
+  back.position.set(0, wallH * 0.56, d - 0.22);
+  back.rotation.y = Math.PI;
+  scene.add(back);
+
+  const n = 13;
+  const xs = [];
+  const span = roomW - 5.2;
+  const x0 = -span / 2;
+  for (let i = 0; i < n; i++) xs.push(x0 + (span / (n - 1)) * i);
+
+  const materials = [];
+  const pink = new THREE.Color(0xff1493);
+  const cyan = new THREE.Color(0x00fff2);
+  const gold = new THREE.Color(0xffea00);
+  const cols = [pink, cyan, gold];
+  const geo = new THREE.SphereGeometry(0.11, 10, 8);
+  for (let i = 0; i < n; i++) {
+    const c = cols[i % cols.length];
+    const mat = new THREE.MeshStandardMaterial({
+      color: c,
+      emissive: c,
+      emissiveIntensity: 0.2,
+      roughness: 0.25,
+      metalness: 0.15,
+    });
+    materials.push(mat);
+    const bulb = new THREE.Mesh(geo, mat);
+    bulb.position.set(xs[i], wallH * 0.56, d - 0.26);
+    scene.add(bulb);
+  }
+  return materials;
+}
+
+/** Benches flush to the front wall, off the main aisle — collidable. */
+function addFrontWallBenches(scene, roomW, roomD) {
+  const d = roomD / 2;
+  const wood = new THREE.MeshStandardMaterial({
+    color: 0x4e342e,
+    roughness: 0.88,
+    metalness: 0.06,
+  });
+  const trim = new THREE.MeshStandardMaterial({
+    color: 0xff1493,
+    emissive: 0xff1493,
+    emissiveIntensity: 0.28,
+    roughness: 0.5,
+    metalness: 0.18,
+  });
+
+  function benchAt(sx) {
+    const g = new THREE.Group();
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.09, 0.4), wood);
+    seat.position.set(0, 0.42, 0);
+    seat.castShadow = true;
+    seat.receiveShadow = true;
+    g.add(seat);
+    const tL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.09, 0.4), trim);
+    tL.position.set(-0.655, 0.42, 0);
+    const tR = tL.clone();
+    tR.position.x = 0.655;
+    g.add(tL, tR);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.5, 0.08), wood);
+    back.position.set(0, 0.7, 0.195);
+    back.castShadow = true;
+    g.add(back);
+    const legGeo = new THREE.BoxGeometry(0.11, 0.42, 0.11);
+    for (const [lx, lz] of [
+      [-0.52, 0.1],
+      [0.52, 0.1],
+      [-0.52, -0.1],
+      [0.52, -0.1],
+    ]) {
+      const leg = new THREE.Mesh(legGeo, wood);
+      leg.position.set(lx, 0.21, lz);
+      leg.castShadow = true;
+      g.add(leg);
+    }
+    g.position.set(sx, 0, d - 0.4);
+    g.updateMatrixWorld(true);
+    g.userData.hitBox = new THREE.Box3().setFromObject(g);
+    scene.add(g);
+    return g;
+  }
+
+  return [benchAt(-4.35), benchAt(4.35)];
 }
 
 /** LED skirting along inner wall bases — pink / cyan wash. */
@@ -990,21 +1162,410 @@ function addTwinCeilingRails(scene, roomW, roomD, wallH) {
   const w = roomW / 2;
   const len = roomD - 2.8;
   const pink = new THREE.Color(0xff1493);
-  const mat = new THREE.MeshStandardMaterial({
-    color: pink,
-    emissive: pink,
-    emissiveIntensity: 1.15,
-    roughness: 0.28,
-    metalness: 0.08,
-  });
+  const materials = [];
   for (const ox of [-w * 0.42, w * 0.42]) {
+    const mat = new THREE.MeshStandardMaterial({
+      color: pink,
+      emissive: pink,
+      emissiveIntensity: 1.15,
+      roughness: 0.28,
+      metalness: 0.08,
+    });
+    materials.push(mat);
     const rail = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, len), mat);
     rail.position.set(ox, wallH - 0.16, 0);
     scene.add(rail);
   }
+  return materials;
 }
 
-function buildRoom(scene, roomW, roomD) {
+function makeWelcomeMatTexture() {
+  const w = 512;
+  const h = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createRadialGradient(w * 0.5, h * 0.55, 20, w * 0.5, h * 0.5, h * 0.85);
+  g.addColorStop(0, "#2a1040");
+  g.addColorStop(0.5, "#140820");
+  g.addColorStop(1, "#0a0612");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(255, 20, 147, 0.75)";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(14, 14, w - 28, h - 28);
+  ctx.strokeStyle = "rgba(0, 255, 238, 0.45)";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(26, 26, w - 52, h - 52);
+  ctx.font = "bold 42px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ff6eb4";
+  ctx.shadowColor = "#ff1493";
+  ctx.shadowBlur = 14;
+  ctx.fillText("WELCOME", w / 2, h * 0.38);
+  ctx.shadowBlur = 0;
+  ctx.font = "22px monospace";
+  ctx.fillStyle = "#7df9ff";
+  ctx.fillText("FUNLAND · FREE PLAY", w / 2, h * 0.62);
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  for (let i = 0; i < 120; i++) {
+    ctx.fillRect((i * 97) % w, (i * 53) % h, 2, 2);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function addEntranceWelcomeMat(scene, roomW, roomD) {
+  const d = roomD / 2;
+  const tex = makeWelcomeMatTexture();
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    emissive: 0xff1493,
+    emissiveIntensity: 0.12,
+    roughness: 0.75,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.96,
+  });
+  const rug = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.1), mat);
+  rug.rotation.x = -Math.PI / 2;
+  rug.position.set(0, 0.022, d - 2.85);
+  scene.add(rug);
+}
+
+function makeExitSignTexture() {
+  const w = 320;
+  const h = 120;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#0a080e";
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(255, 82, 82, 0.9)";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(6, 6, w - 12, h - 12);
+  ctx.font = "bold 56px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ff5252";
+  ctx.shadowColor = "#ff1744";
+  ctx.shadowBlur = 20;
+  ctx.fillText("EXIT →", w / 2, h / 2);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function addFrontExitSign(scene, roomW, roomD, wallH) {
+  const d = roomD / 2;
+  const tex = makeExitSignTexture();
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    emissive: 0xff1744,
+    emissiveIntensity: 0.55,
+    roughness: 0.45,
+    metalness: 0.05,
+    transparent: true,
+  });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.88), mat);
+  sign.position.set(0, wallH * 0.72, d - 0.21);
+  sign.rotation.y = Math.PI;
+  scene.add(sign);
+  return mat;
+}
+
+/** Corner vending column — extra color near the prize desk. */
+function addSodaMachine(scene, roomW, roomD) {
+  const d = roomD / 2;
+  const body = new THREE.MeshStandardMaterial({
+    color: 0xc62828,
+    emissive: 0x8b0000,
+    emissiveIntensity: 0.12,
+    roughness: 0.55,
+    metalness: 0.2,
+  });
+  const chrome = new THREE.MeshStandardMaterial({
+    color: 0xa8a8b8,
+    roughness: 0.2,
+    metalness: 0.9,
+  });
+  const glow = new THREE.MeshStandardMaterial({
+    color: 0x00e676,
+    emissive: 0x00e676,
+    emissiveIntensity: 0.85,
+    roughness: 0.35,
+    metalness: 0.1,
+  });
+  const g = new THREE.Group();
+  g.position.set(roomW * 0.38, 0, d - 3.1);
+  g.rotation.y = -0.35;
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1.65, 0.58), body);
+  box.position.y = 0.825;
+  box.castShadow = true;
+  g.add(box);
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.95), glow);
+  win.position.set(0, 0.88, 0.295);
+  g.add(win);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.12, 0.62), chrome);
+  top.position.y = 1.71;
+  g.add(top);
+  scene.add(g);
+  const pl = new THREE.PointLight(0x00ff88, 0.45, 4.5, 2);
+  pl.position.set(roomW * 0.38, 1.2, d - 2.95);
+  scene.add(pl);
+}
+
+function addSnackMachine(scene, roomW, roomD) {
+  const d = roomD / 2;
+  const body = new THREE.MeshStandardMaterial({
+    color: 0x1565c0,
+    emissive: 0x0d47a1,
+    emissiveIntensity: 0.1,
+    roughness: 0.55,
+    metalness: 0.22,
+  });
+  const chrome = new THREE.MeshStandardMaterial({
+    color: 0xb0b8c8,
+    roughness: 0.18,
+    metalness: 0.92,
+  });
+  const glow = new THREE.MeshStandardMaterial({
+    color: 0xff9100,
+    emissive: 0xff6d00,
+    emissiveIntensity: 0.78,
+    roughness: 0.4,
+    metalness: 0.08,
+  });
+  const g = new THREE.Group();
+  g.position.set(-roomW * 0.38, 0, d - 3.4);
+  g.rotation.y = 0.38;
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.68, 1.55, 0.55), body);
+  box.position.y = 0.775;
+  box.castShadow = true;
+  g.add(box);
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.88), glow);
+  win.position.set(0, 0.82, 0.28);
+  g.add(win);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.11, 0.58), chrome);
+  top.position.y = 1.605;
+  g.add(top);
+  scene.add(g);
+  const pl = new THREE.PointLight(0xff8800, 0.38, 4.2, 2);
+  pl.position.set(-roomW * 0.38, 1.15, d - 3.25);
+  scene.add(pl);
+}
+
+function addHighWallPosters(scene, roomW, roomD, wallH) {
+  const w = roomW / 2;
+  const d = roomD / 2;
+  const mkTex = (label, hue) => {
+    const c = document.createElement("canvas");
+    c.width = 256;
+    c.height = 384;
+    const x = c.getContext("2d");
+    const gr = x.createLinearGradient(0, 0, 256, 384);
+    gr.addColorStop(0, `hsl(${hue}, 85%, 22%)`);
+    gr.addColorStop(1, "#0a0612");
+    x.fillStyle = gr;
+    x.fillRect(0, 0, 256, 384);
+    x.strokeStyle = "rgba(255,255,255,0.25)";
+    x.lineWidth = 4;
+    x.strokeRect(8, 8, 240, 368);
+    x.font = "bold 38px monospace";
+    x.textAlign = "center";
+    x.fillStyle = "#fff8e1";
+    x.fillText(label, 128, 200);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  const matL = new THREE.MeshStandardMaterial({
+    map: mkTex("NEW!", 320),
+    emissive: 0xff1493,
+    emissiveIntensity: 0.06,
+    roughness: 0.75,
+    metalness: 0,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const matR = new THREE.MeshStandardMaterial({
+    map: mkTex("1UP", 185),
+    emissive: 0x00bcd4,
+    emissiveIntensity: 0.06,
+    roughness: 0.75,
+    metalness: 0,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const geo = new THREE.PlaneGeometry(0.95, 1.42);
+  const pL = new THREE.Mesh(geo, matL);
+  pL.position.set(-w + 0.22, wallH * 0.78, 2.5);
+  pL.rotation.y = Math.PI / 2;
+  scene.add(pL);
+  const pR = new THREE.Mesh(geo, matR);
+  pR.position.set(w - 0.22, wallH * 0.78, -1.2);
+  pR.rotation.y = -Math.PI / 2;
+  scene.add(pR);
+}
+
+/** Horizontal neon band wrapping the room at mid height. */
+function addMidWallNeonBand(scene, roomW, roomD, wallH) {
+  const w = roomW / 2;
+  const d = roomD / 2;
+  const y = wallH * 0.62;
+  const h = 0.055;
+  const inset = 0.19;
+  const mk = (color, ei, x, yy, z, gw, gd) => {
+    const c = new THREE.Color(color);
+    const m = new THREE.MeshStandardMaterial({
+      color: c,
+      emissive: c,
+      emissiveIntensity: ei,
+      roughness: 0.4,
+      metalness: 0.12,
+    });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(gw, h, gd), m);
+    mesh.position.set(x, yy, z);
+    scene.add(mesh);
+  };
+  mk(0xaa00ff, 0.75, 0, y, -d + inset, roomW - 2.4, 0.09);
+  mk(0xaa00ff, 0.75, 0, y, d - inset, roomW - 2.4, 0.09);
+  mk(0xff00aa, 0.78, -w + inset, y, 0, 0.09, roomD - 2.4);
+  mk(0xff00aa, 0.78, w - inset, y, 0, 0.09, roomD - 2.4);
+}
+
+/** Low velvet-rope stanchions — defines the aisle without blocking play. */
+function addAisleStanchions(scene, roomW, roomD) {
+  const w = roomW / 2;
+  const d = roomD / 2;
+  const chrome = new THREE.MeshStandardMaterial({
+    color: 0xc0c0d0,
+    roughness: 0.25,
+    metalness: 0.85,
+  });
+  const gold = new THREE.MeshStandardMaterial({
+    color: 0xffd700,
+    emissive: 0xffaa00,
+    emissiveIntensity: 0.25,
+    roughness: 0.35,
+    metalness: 0.6,
+  });
+  const ropeMat = new THREE.MeshStandardMaterial({
+    color: 0x8b0000,
+    emissive: 0x440000,
+    emissiveIntensity: 0.08,
+    roughness: 0.9,
+    metalness: 0,
+  });
+  const posts = [
+    [-w * 0.55, -d + 8],
+    [w * 0.55, -d + 8],
+    [-w * 0.55, d - 7],
+    [w * 0.55, d - 7],
+  ];
+  for (const [px, pz] of posts) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.72, 10), chrome);
+    pole.position.set(px, 0.36, pz);
+    scene.add(pole);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), gold);
+    knob.position.set(px, 0.76, pz);
+    scene.add(knob);
+  }
+  const ropeY = 0.62;
+  const ropeGeo = new THREE.CylinderGeometry(0.025, 0.025, 1, 6);
+  const r1 = new THREE.Mesh(ropeGeo, ropeMat);
+  r1.scale.set(1, w * 1.1, 1);
+  r1.rotation.z = Math.PI / 2;
+  r1.position.set(0, ropeY, -d + 8);
+  scene.add(r1);
+  const r2 = r1.clone();
+  r2.position.set(0, ropeY, d - 7);
+  scene.add(r2);
+}
+
+/** Small floating crystals in the aisle — subtle motion in animate(). */
+function addLobbySparkles(scene, roomW, roomD, wallH) {
+  const group = new THREE.Group();
+  const geo = new THREE.OctahedronGeometry(0.05, 0);
+  const cols = [0xff1493, 0x00fff2, 0xffea00, 0xe040fb];
+  const w = roomW / 2;
+  const d = roomD / 2;
+  const spots = [
+    [-1.1, wallH - 1.1, -2],
+    [1.2, wallH - 1.35, 1],
+    [-0.6, wallH - 0.95, 4],
+    [0.9, wallH - 1.2, 7],
+    [-1.4, wallH - 1.05, -5],
+    [1.3, wallH - 1.28, -3],
+    [0, wallH - 0.88, 9],
+    [-0.9, wallH - 1.15, 11],
+  ];
+  spots.forEach(([x, y, z], i) => {
+    const c = cols[i % cols.length];
+    const col = new THREE.Color(c);
+    const mat = new THREE.MeshStandardMaterial({
+      color: col,
+      emissive: col,
+      emissiveIntensity: 1.05,
+      roughness: 0.2,
+      metalness: 0.05,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    mesh.userData.baseY = y;
+    mesh.userData.phase = i * 0.73;
+    group.add(mesh);
+  });
+  scene.add(group);
+  return group;
+}
+
+function addCrownMolding(scene, roomW, roomD, wallH) {
+  const w = roomW / 2;
+  const d = roomD / 2;
+  const y = wallH - 0.11;
+  const h = 0.14;
+  const inset = 0.12;
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x1a0a28,
+    emissive: 0xffcc00,
+    emissiveIntensity: 0.04,
+    roughness: 0.88,
+    metalness: 0.15,
+  });
+  const mk = (x, yy, z, gw, gd) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(gw, h, gd), mat);
+    m.position.set(x, yy, z);
+    scene.add(m);
+  };
+  mk(0, y, -d + inset, roomW - 1.2, 0.22);
+  mk(0, y, d - inset, roomW - 1.2, 0.22);
+  mk(-w + inset, y, 0, 0.22, roomD - 1.2);
+  mk(w - inset, y, 0, 0.22, roomD - 1.2);
+}
+
+/** Floor corner washes — lifts walls from pure black. */
+function addCornerUplights(scene, roomW, roomD) {
+  const w = roomW / 2;
+  const d = roomD / 2;
+  const pairs = [
+    { c: 0xff1493, p: [-w + 0.9, 0.35, -d + 0.9] },
+    { c: 0x00fff2, p: [w - 0.9, 0.35, -d + 0.9] },
+    { c: 0x00fff2, p: [-w + 0.9, 0.35, d - 0.9] },
+    { c: 0xff1493, p: [w - 0.9, 0.35, d - 0.9] },
+  ];
+  for (const { c, p } of pairs) {
+    const L = new THREE.PointLight(c, 0.42, 11, 2);
+    L.position.set(p[0], p[1], p[2]);
+    scene.add(L);
+  }
+}
+
+function buildRoom(scene, roomW, roomD, games) {
   const wallH = 5.2;
   const floorMap = makeCheckerTexture();
   const floorMat = new THREE.MeshStandardMaterial({
@@ -1073,7 +1634,7 @@ function buildRoom(scene, roomW, roomD) {
   const gold = 0xffcc00;
 
   const tubeZLen = roomD - 3;
-  addTwinCeilingRails(scene, roomW, roomD, wallH);
+  const twinRailMats = addTwinCeilingRails(scene, roomW, roomD, wallH);
   addNeonTube(scene, 0, wallH - 0.42, 0, tubeZLen * 0.92, "z", cyan, 0.55);
 
   /** Cross-beams and wall grazers */
@@ -1087,10 +1648,35 @@ function buildRoom(scene, roomW, roomD) {
 
   addWallMurals(scene, roomW, roomD, wallH);
   addHangingSign(scene, roomW, roomD, wallH);
-  addBackWallScoreboard(scene, roomW, roomD, wallH);
+  const { refreshScoreboard } = addBackWallScoreboard(scene, roomW, roomD, wallH, games);
   addNeonSkirting(scene, roomW, roomD, wallH);
+  addCrownMolding(scene, roomW, roomD, wallH);
+  addMidWallNeonBand(scene, roomW, roomD, wallH);
+  addEntranceWelcomeMat(scene, roomW, roomD);
+  const exitSignMat = addFrontExitSign(scene, roomW, roomD, wallH);
+  const marqueeBulbMats = addFrontWallMarquee(scene, roomW, roomD, wallH);
+  addAisleStanchions(scene, roomW, roomD);
+  const sparkleGroup = addLobbySparkles(scene, roomW, roomD, wallH);
+  addSodaMachine(scene, roomW, roomD);
+  addSnackMachine(scene, roomW, roomD);
+  addHighWallPosters(scene, roomW, roomD, wallH);
+  addCornerUplights(scene, roomW, roomD);
+  const lobbyBenches = addFrontWallBenches(scene, roomW, roomD);
 
-  return { roomW, roomD, wallH, floorGrid: grid };
+  return {
+    roomW,
+    roomD,
+    wallH,
+    floorGrid: grid,
+    lobbyBenches,
+    lobbyAnim: {
+      twinRailMats,
+      sparkleGroup,
+      exitSignMat,
+      refreshScoreboard,
+      marqueeBulbMats,
+    },
+  };
 }
 
 function clampPlayer(pos, roomW, roomD, margin = 0.45) {
@@ -1126,6 +1712,25 @@ function startArcade() {
   const promptEl = document.getElementById("hud-prompt");
   const hintEl = document.getElementById("hint");
 
+  function requestPointerLockSupported() {
+    const el = document.body;
+    return (
+      typeof el.requestPointerLock === "function" ||
+      typeof el.webkitRequestPointerLock === "function"
+    );
+  }
+  function useTouchStyleControls() {
+    if (!requestPointerLockSupported()) return true;
+    return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+  }
+  if (instructions && useTouchStyleControls()) {
+    instructions.innerHTML = [
+      "Tap to enter · Drag the stick (lower left) to walk · Drag the arcade floor to look",
+      "Jump / Use when lit · Lobby exits walk mode · Face a cabinet — Use opens the game",
+      "Prize counter: top-right · Back or Esc closes it",
+    ].join("<br />");
+  }
+
   const reduceMotionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
   let reduceMotionOn = reduceMotionMq.matches;
   reduceMotionMq.addEventListener("change", () => {
@@ -1151,6 +1756,7 @@ function startArcade() {
   renderer.toneMappingExposure = 1.12;
   document.body.appendChild(renderer.domElement);
   renderer.domElement.id = "arcade-canvas";
+  renderer.domElement.style.touchAction = "none";
 
   const composer = new EffectComposer(renderer);
   composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1166,7 +1772,7 @@ function startArcade() {
 
   const roomW = VIBE.roomW;
   const roomD = VIBE.roomD;
-  const { floorGrid } = buildRoom(scene, roomW, roomD);
+  const { floorGrid, lobbyAnim, lobbyBenches } = buildRoom(scene, roomW, roomD, games);
   const prizeSetup = buildPrizeCounterStation(scene, roomW, roomD);
   const { station: prizeStation, prizeInteractMesh, npcParts: prizeNpcParts } = prizeSetup;
 
@@ -1290,13 +1896,42 @@ function startArcade() {
   }
 
   let controls;
+  let touchPlayMode = false;
+  let lookPointerId = null;
+  const touchDrive = { dx: 0, dz: 0 };
+  const joyState = { pointerId: null, originX: 0, originY: 0, knob: null, maxR: 56 };
   const keys = new Set();
+  const WALK_CODES = [
+    "KeyW",
+    "KeyS",
+    "KeyA",
+    "KeyD",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+  ];
+  let walkInputArmed = false;
+
+  function isWalkKeyCode(code) {
+    return WALK_CODES.includes(code);
+  }
+
+  function resetWalkInput() {
+    keys.clear();
+    walkInputArmed = false;
+  }
 
   function openTokenShop() {
     const shop = document.getElementById("token-shop");
     if (!shop) return;
     if (controls?.isLocked) controls.unlock();
-    keys.clear();
+    resetWalkInput();
+    touchDrive.dx = 0;
+    touchDrive.dz = 0;
+    joyState.pointerId = null;
+    lookPointerId = null;
+    if (joyState.knob) joyState.knob.style.transform = "translate(0px,0px)";
     shop.hidden = false;
     const msg = document.getElementById("token-shop-msg");
     if (msg) msg.textContent = "";
@@ -1310,7 +1945,7 @@ function startArcade() {
   function closeTokenShop() {
     const shop = document.getElementById("token-shop");
     if (shop) shop.hidden = true;
-    keys.clear();
+    resetWalkInput();
   }
 
   applyTokenVisualTuning();
@@ -1327,6 +1962,23 @@ function startArcade() {
       syncTokenHud();
       applyTokenVisualTuning();
     }
+    const k = e.key || "";
+    if (
+      k.startsWith("arcade-lb-v2:") ||
+      k === "mazeRunnerHighScores" ||
+      k === "meerkat-chase-highscore-v1"
+    ) {
+      lobbyAnim?.refreshScoreboard?.();
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    lobbyAnim?.refreshScoreboard?.();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    resetWalkInput();
+    if (!document.hidden) lobbyAnim?.refreshScoreboard?.();
   });
 
   const tokenShop = document.getElementById("token-shop");
@@ -1359,7 +2011,7 @@ function startArcade() {
     scene.add(pl);
   });
 
-  const colliders = [prizeStation, ...cabinets];
+  const colliders = [prizeStation, ...cabinets, ...(lobbyBenches ?? [])];
 
   controls = new PointerLockControls(camera, document.body);
   camera.position.set(0, EYE_HEIGHT, roomD / 2 - 2.4);
@@ -1371,91 +2023,9 @@ function startArcade() {
   let verticalVelocity = 0;
   const JUMP_SPEED = 5.35;
   const GRAVITY = -21;
-
-  function tryJump() {
-    if (!controls.isLocked) return;
-    const shop = document.getElementById("token-shop");
-    if (shop && !shop.hidden) return;
-    if (verticalVelocity > 0.06) return;
-    if (camera.position.y > EYE_HEIGHT + 0.035) return;
-    verticalVelocity = JUMP_SPEED;
-  }
-
-  function findPrizeCounterInteract(cam, mesh, rc) {
-    if (!mesh) return false;
-    rc.setFromCamera({ x: 0, y: 0 }, cam);
-    const hits = rc.intersectObject(mesh, false);
-    if (!hits.length) return false;
-    cam.getWorldPosition(camWorld);
-    mesh.getWorldPosition(interactWorld);
-    return camWorld.distanceTo(interactWorld) < 4.35;
-  }
-
-  document.addEventListener("keydown", (e) => {
-    const shopEl = document.getElementById("token-shop");
-    const shopOpen = !!(shopEl && !shopEl.hidden);
-
-    if (e.code === "Escape" && shopOpen) {
-      e.preventDefault();
-      closeTokenShop();
-      return;
-    }
-
-    if (e.code === "KeyT" && !e.repeat) {
-      e.preventDefault();
-      if (shopOpen) closeTokenShop();
-      else openTokenShop();
-      return;
-    }
-
-    if (shopOpen || !controls.isLocked) return;
-
-    keys.add(e.code);
-
-    if (e.code === "Space" && !e.repeat) {
-      e.preventDefault();
-      tryJump();
-    }
-    if (e.code === "KeyE" && !e.repeat) {
-      const prizeHit = findPrizeCounterInteract(camera, prizeInteractMesh, raycaster);
-      const target = prizeHit ? null : findInteractTarget(camera, cabinets, raycaster);
-      if (prizeHit) {
-        openTokenShop();
-        return;
-      }
-      if (target) window.location.href = target.userData.href;
-    }
-  });
-  document.addEventListener("keyup", (e) => keys.delete(e.code));
-
-  document.getElementById("arcade-jump-btn")?.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    tryJump();
-  });
-
-  blocker?.addEventListener("click", () => {
-    if (games.length) controls.lock();
-  });
-
-  const lockedHint =
-    "Esc — close prize / release look · T — toggle prize · E — play / Rita · Space — jump";
-  controls.addEventListener("lock", () => {
-    document.body.classList.add("locked");
-    if (blocker) blocker.style.display = "none";
-    if (instructions) instructions.style.display = "none";
-    if (hintEl && window.location.protocol !== "file:") hintEl.textContent = lockedHint;
-  });
-  controls.addEventListener("unlock", () => {
-    document.body.classList.remove("locked");
-    if (blocker) blocker.style.display = "flex";
-    if (instructions) instructions.style.display = "block";
-    camera.position.y = EYE_HEIGHT;
-    verticalVelocity = 0;
-    keys.clear();
-    if (hintEl && window.location.protocol !== "file:") hintEl.textContent = "";
-  });
-
-  const clock = new THREE.Clock();
+  let lookLastX = 0;
+  let lookLastY = 0;
+  const LOOK_SENS = 0.0032;
 
   function findInteractTarget(cam, cabs, rc) {
     rc.setFromCamera({ x: 0, y: 0 }, cam);
@@ -1474,6 +2044,304 @@ function startArcade() {
     return null;
   }
 
+  function arcadePlaying() {
+    const shop = document.getElementById("token-shop");
+    if (shop && !shop.hidden) return false;
+    return controls.isLocked || touchPlayMode;
+  }
+
+  function tryJump() {
+    if (!arcadePlaying()) return;
+    if (verticalVelocity > 0.06) return;
+    if (camera.position.y > EYE_HEIGHT + 0.035) return;
+    verticalVelocity = JUMP_SPEED;
+  }
+
+  function findPrizeCounterInteract(cam, mesh, rc) {
+    if (!mesh) return false;
+    rc.setFromCamera({ x: 0, y: 0 }, cam);
+    const hits = rc.intersectObject(mesh, false);
+    if (!hits.length) return false;
+    cam.getWorldPosition(camWorld);
+    mesh.getWorldPosition(interactWorld);
+    return camWorld.distanceTo(interactWorld) < 4.35;
+  }
+
+  function tryArcadeInteract() {
+    if (!controls.isLocked && !touchPlayMode) return;
+    const shop = document.getElementById("token-shop");
+    if (shop && !shop.hidden) return;
+    const prizeHit = findPrizeCounterInteract(camera, prizeInteractMesh, raycaster);
+    const target = prizeHit ? null : findInteractTarget(camera, cabinets, raycaster);
+    if (prizeHit) {
+      openTokenShop();
+      return;
+    }
+    if (target) {
+      try {
+        sessionStorage.setItem("arcade-resume-walk-v1", "1");
+      } catch (_) {
+        /* ignore */
+      }
+      window.location.href = target.userData.href;
+    }
+  }
+
+  function exitTouchPlayMode() {
+    if (!touchPlayMode) return;
+    touchPlayMode = false;
+    touchDrive.dx = 0;
+    touchDrive.dz = 0;
+    lookPointerId = null;
+    joyState.pointerId = null;
+    if (joyState.knob) joyState.knob.style.transform = "translate(0px,0px)";
+    document.body.classList.remove("locked", "touch-play-mode");
+    if (blocker) blocker.style.display = "flex";
+    if (instructions) instructions.style.display = "block";
+    camera.position.y = EYE_HEIGHT;
+    verticalVelocity = 0;
+    resetWalkInput();
+    if (hintEl && window.location.protocol !== "file:") hintEl.textContent = "";
+    if (touchUiRoot) touchUiRoot.style.display = "none";
+    const u = document.getElementById("arcade-use-btn");
+    if (u) u.disabled = true;
+  }
+
+  function enterTouchPlayMode() {
+    if (!games.length || touchPlayMode || controls.isLocked) return;
+    resetWalkInput();
+    touchPlayMode = true;
+    document.body.classList.add("locked", "touch-play-mode");
+    if (blocker) blocker.style.display = "none";
+    if (instructions) instructions.style.display = "none";
+    if (hintEl && window.location.protocol !== "file:")
+      hintEl.textContent =
+        "Drag right side to look · stick = walk · Jump / Use · Lobby to exit · T = prize";
+    if (touchUiRoot) touchUiRoot.style.display = "block";
+  }
+
+  function enterArcadePlayMode() {
+    if (!games.length || touchPlayMode || controls.isLocked) return;
+    if (useTouchStyleControls()) enterTouchPlayMode();
+    else controls.lock();
+  }
+
+  const touchUiRoot = document.createElement("div");
+  touchUiRoot.id = "arcade-touch-ui";
+  touchUiRoot.style.cssText =
+    "position:fixed;inset:0;z-index:7;pointer-events:none;display:none;";
+  const joyWrap = document.createElement("div");
+  joyWrap.style.cssText =
+    "position:absolute;bottom:max(12px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));width:min(46vw,200px);height:min(46vw,200px);pointer-events:auto;touch-action:none;";
+  const joyBase = document.createElement("div");
+  joyBase.style.cssText =
+    "position:absolute;left:50%;top:50%;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;background:rgba(10,8,24,0.55);border:2px solid rgba(0,255,238,0.35);box-shadow:0 0 16px rgba(255,20,147,0.2);touch-action:none;";
+  const joyKnob = document.createElement("div");
+  joyKnob.style.cssText =
+    "position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,105,180,0.65);pointer-events:none;transform:translate(0px,0px);";
+  joyState.knob = joyKnob;
+  joyBase.appendChild(joyKnob);
+  joyWrap.appendChild(joyBase);
+  touchUiRoot.appendChild(joyWrap);
+  document.body.appendChild(touchUiRoot);
+
+  function updateJoystickKnob(clientX, clientY) {
+    const dx = clientX - joyState.originX;
+    const dy = clientY - joyState.originY;
+    const m = Math.hypot(dx, dy);
+    const mr = joyState.maxR;
+    const nx = m > mr ? (dx * mr) / m : dx;
+    const ny = m > mr ? (dy * mr) / m : dy;
+    joyKnob.style.transform = `translate(${nx}px,${ny}px)`;
+    const inv = 1 / mr;
+    touchDrive.dx = THREE.MathUtils.clamp(nx * inv, -1, 1);
+    touchDrive.dz = THREE.MathUtils.clamp(-ny * inv, -1, 1);
+  }
+
+  function joyPointerDown(e) {
+    if (!touchPlayMode) return;
+    const shop = document.getElementById("token-shop");
+    if (shop && !shop.hidden) return;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    joyState.pointerId = e.pointerId;
+    const r = joyBase.getBoundingClientRect();
+    joyState.originX = r.left + r.width / 2;
+    joyState.originY = r.top + r.height / 2;
+    joyBase.setPointerCapture(e.pointerId);
+    updateJoystickKnob(e.clientX, e.clientY);
+    e.preventDefault();
+  }
+  function joyPointerMove(e) {
+    if (joyState.pointerId !== e.pointerId) return;
+    updateJoystickKnob(e.clientX, e.clientY);
+    e.preventDefault();
+  }
+  function joyPointerUp(e) {
+    if (joyState.pointerId !== e.pointerId) return;
+    joyState.pointerId = null;
+    joyKnob.style.transform = "translate(0px,0px)";
+    touchDrive.dx = 0;
+    touchDrive.dz = 0;
+    try {
+      joyBase.releasePointerCapture(e.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  joyBase.addEventListener("pointerdown", joyPointerDown);
+  joyBase.addEventListener("pointermove", joyPointerMove);
+  joyBase.addEventListener("pointerup", joyPointerUp);
+  joyBase.addEventListener("pointercancel", joyPointerUp);
+
+  function canvasLookDown(e) {
+    if (!touchPlayMode) return;
+    if (e.target !== renderer.domElement) return;
+    const shop = document.getElementById("token-shop");
+    if (shop && !shop.hidden) return;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const leftBand = Math.min(window.innerWidth * 0.44, 220);
+    if (e.clientX < leftBand) return;
+    lookPointerId = e.pointerId;
+    lookLastX = e.clientX;
+    lookLastY = e.clientY;
+    renderer.domElement.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+  function canvasLookMove(e) {
+    if (lookPointerId !== e.pointerId) return;
+    const dx = e.clientX - lookLastX;
+    const dy = e.clientY - lookLastY;
+    lookLastX = e.clientX;
+    lookLastY = e.clientY;
+    camera.rotation.y -= dx * LOOK_SENS;
+    camera.rotation.x -= dy * LOOK_SENS;
+    camera.rotation.x = THREE.MathUtils.clamp(camera.rotation.x, -1.42, 1.42);
+    e.preventDefault();
+  }
+  function canvasLookUp(e) {
+    if (lookPointerId !== e.pointerId) return;
+    lookPointerId = null;
+    try {
+      renderer.domElement.releasePointerCapture(e.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  renderer.domElement.addEventListener("pointerdown", canvasLookDown);
+  renderer.domElement.addEventListener("pointermove", canvasLookMove);
+  renderer.domElement.addEventListener("pointerup", canvasLookUp);
+  renderer.domElement.addEventListener("pointercancel", canvasLookUp);
+
+  document.getElementById("arcade-touch-exit")?.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    exitTouchPlayMode();
+  });
+
+  document.getElementById("arcade-use-btn")?.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    tryArcadeInteract();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const shopEl = document.getElementById("token-shop");
+    const shopOpen = !!(shopEl && !shopEl.hidden);
+
+    if (e.code === "Escape" && shopOpen) {
+      e.preventDefault();
+      closeTokenShop();
+      return;
+    }
+
+    if (e.code === "Escape" && touchPlayMode) {
+      e.preventDefault();
+      exitTouchPlayMode();
+      return;
+    }
+
+    if (e.code === "KeyT" && !e.repeat) {
+      e.preventDefault();
+      if (shopOpen) closeTokenShop();
+      else openTokenShop();
+      return;
+    }
+
+    if (shopOpen || (!controls.isLocked && !touchPlayMode)) return;
+
+    if (isWalkKeyCode(e.code)) walkInputArmed = true;
+    keys.add(e.code);
+
+    if (e.code === "Space" && !e.repeat) {
+      e.preventDefault();
+      tryJump();
+    }
+    if (e.code === "KeyE" && !e.repeat) tryArcadeInteract();
+  });
+  document.addEventListener("keyup", (e) => {
+    keys.delete(e.code);
+    if (!WALK_CODES.some((c) => keys.has(c))) walkInputArmed = false;
+  });
+
+  window.addEventListener("blur", () => {
+    resetWalkInput();
+  });
+
+  document.getElementById("arcade-jump-btn")?.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    tryJump();
+  });
+
+  blocker?.addEventListener("click", () => {
+    enterArcadePlayMode();
+  });
+  blocker?.addEventListener(
+    "touchend",
+    (e) => {
+      e.preventDefault();
+      enterArcadePlayMode();
+    },
+    { passive: false }
+  );
+
+  document.addEventListener("pointerlockchange", () => {
+    if (document.pointerLockElement != null) return;
+    resetWalkInput();
+  });
+  document.addEventListener("pointerlockerror", () => {
+    if (games.length && !touchPlayMode && !controls.isLocked) enterTouchPlayMode();
+  });
+
+  const lockedHint =
+    "Esc — close prize / release look · T — toggle prize · E — play / Rita · Space — jump";
+  controls.addEventListener("lock", () => {
+    resetWalkInput();
+    document.body.classList.remove("touch-play-mode");
+    document.body.classList.add("locked");
+    if (touchUiRoot) touchUiRoot.style.display = "none";
+    if (blocker) blocker.style.display = "none";
+    if (instructions) instructions.style.display = "none";
+    if (hintEl && window.location.protocol !== "file:") hintEl.textContent = lockedHint;
+  });
+  controls.addEventListener("unlock", () => {
+    document.body.classList.remove("locked", "touch-play-mode");
+    touchPlayMode = false;
+    if (touchUiRoot) touchUiRoot.style.display = "none";
+    if (blocker) blocker.style.display = "flex";
+    if (instructions) instructions.style.display = "block";
+    camera.position.y = EYE_HEIGHT;
+    verticalVelocity = 0;
+    resetWalkInput();
+    touchDrive.dx = 0;
+    touchDrive.dz = 0;
+    joyState.pointerId = null;
+    lookPointerId = null;
+    if (joyState.knob) joyState.knob.style.transform = "translate(0px,0px)";
+    if (hintEl && window.location.protocol !== "file:") hintEl.textContent = "";
+    const u = document.getElementById("arcade-use-btn");
+    if (u) u.disabled = true;
+  });
+
+  const clock = new THREE.Clock();
+
   function animate() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.05);
@@ -1482,12 +2350,23 @@ function startArcade() {
     const tokenShopEl = document.getElementById("token-shop");
     const tokenShopOpen = !!(tokenShopEl && !tokenShopEl.hidden);
 
-    if (controls.isLocked && !tokenShopOpen) {
-      const step = getWalkSpeed() * dt;
-      if (keys.has("KeyW") || keys.has("ArrowUp")) controls.moveForward(step);
-      if (keys.has("KeyS") || keys.has("ArrowDown")) controls.moveForward(-step);
-      if (keys.has("KeyA") || keys.has("ArrowLeft")) controls.moveRight(-step);
-      if (keys.has("KeyD") || keys.has("ArrowRight")) controls.moveRight(step);
+    const playing = arcadePlaying();
+    if (playing) {
+      const canWalk =
+        touchPlayMode || (document.hasFocus() && walkInputArmed);
+      if (canWalk) {
+        const step = getWalkSpeed() * dt;
+        let f = touchDrive.dz;
+        let s = touchDrive.dx;
+        if (keys.has("KeyW") || keys.has("ArrowUp")) f += 1;
+        if (keys.has("KeyS") || keys.has("ArrowDown")) f -= 1;
+        if (keys.has("KeyD") || keys.has("ArrowRight")) s += 1;
+        if (keys.has("KeyA") || keys.has("ArrowLeft")) s -= 1;
+        f = THREE.MathUtils.clamp(f, -1, 1);
+        s = THREE.MathUtils.clamp(s, -1, 1);
+        if (f !== 0) controls.moveForward(step * f);
+        if (s !== 0) controls.moveRight(step * s);
+      }
       verticalVelocity += GRAVITY * dt;
       camera.position.y += verticalVelocity * dt;
       if (camera.position.y < EYE_HEIGHT) {
@@ -1498,11 +2377,17 @@ function startArcade() {
       resolveObstacleCollisions(camera.position, colliders);
 
       if (findPrizeCounterInteract(camera, prizeInteractMesh, raycaster)) {
-        prompt = "Press E — Prize counter · Rita";
+        prompt = touchPlayMode ? "Tap Use — Prize counter · Rita" : "Press E — Prize counter · Rita";
       } else {
         const t = findInteractTarget(camera, cabinets, raycaster);
-        if (t) prompt = `Press E — ${t.userData.title}`;
+        if (t)
+          prompt = touchPlayMode ? `Tap Use — ${t.userData.title}` : `Press E — ${t.userData.title}`;
       }
+    }
+
+    const useBtn = document.getElementById("arcade-use-btn");
+    if (useBtn && (controls.isLocked || touchPlayMode)) {
+      useBtn.disabled = !prompt;
     }
 
     if (promptEl) promptEl.textContent = prompt;
@@ -1517,6 +2402,52 @@ function startArcade() {
         const wobble =
           Math.sin(et * fl.f * 6.283) * fl.mul + Math.sin(et * fl.f * 11.7) * (fl.mul * 0.35);
         fl.light.intensity = Math.max(0.05, fl.base + wobble);
+      }
+    }
+
+    if (lobbyAnim?.twinRailMats?.length && !reduceMotionOn) {
+      const pulse = 1 + Math.sin(et * 1.65) * 0.055;
+      for (const rm of lobbyAnim.twinRailMats) {
+        rm.emissiveIntensity = 1.15 * pulse;
+      }
+    } else if (lobbyAnim?.twinRailMats?.length) {
+      for (const rm of lobbyAnim.twinRailMats) {
+        rm.emissiveIntensity = 1.15;
+      }
+    }
+
+    if (lobbyAnim?.sparkleGroup && !reduceMotionOn) {
+      for (const ch of lobbyAnim.sparkleGroup.children) {
+        const base = ch.userData.baseY ?? ch.position.y;
+        const ph = ch.userData.phase ?? 0;
+        ch.position.y = base + Math.sin(et * 2.05 + ph) * 0.11;
+        ch.rotation.y += dt * 0.65;
+        ch.rotation.x = Math.sin(et * 1.3 + ph) * 0.25;
+      }
+    }
+
+    if (lobbyAnim?.exitSignMat) {
+      const ex = lobbyAnim.exitSignMat;
+      if (reduceMotionOn) {
+        ex.emissiveIntensity = 0.55;
+      } else {
+        ex.emissiveIntensity = 0.48 + Math.sin(et * 3.1) * 0.14;
+      }
+    }
+
+    if (lobbyAnim?.marqueeBulbMats?.length) {
+      const bulbs = lobbyAnim.marqueeBulbMats;
+      const n = bulbs.length;
+      if (reduceMotionOn) {
+        for (let i = 0; i < n; i++) {
+          bulbs[i].emissiveIntensity = 0.38;
+        }
+      } else {
+        for (let i = 0; i < n; i++) {
+          const phase = (i / Math.max(1, n - 1)) * Math.PI * 2;
+          const wave = 0.5 + 0.5 * Math.sin(et * 3.4 - phase * 2.2);
+          bulbs[i].emissiveIntensity = 0.1 + wave * 1.02;
+        }
       }
     }
 
@@ -1555,6 +2486,22 @@ function startArcade() {
   if (window.location.protocol === "file:" && hintEl) {
     hintEl.textContent =
       "Local tip: use python3 -m http.server so games and Three.js modules load correctly.";
+  }
+
+  const ARCADE_RESUME_WALK = "arcade-resume-walk-v1";
+  try {
+    if (sessionStorage.getItem(ARCADE_RESUME_WALK) === "1") {
+      sessionStorage.removeItem(ARCADE_RESUME_WALK);
+      queueMicrotask(() => {
+        if (!games.length) return;
+        enterArcadePlayMode();
+        setTimeout(() => {
+          if (games.length && !controls.isLocked && !touchPlayMode) enterTouchPlayMode();
+        }, 250);
+      });
+    }
+  } catch (_) {
+    /* ignore */
   }
 
   animate();
