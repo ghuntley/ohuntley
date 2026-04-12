@@ -92,9 +92,10 @@ function generateRound() {
   const right = buildings[randInt(Math.floor(buildings.length * 0.7), buildings.length - 2)];
 
   const pr = Math.round(20 * scaleH);
+  const foot = Math.round(16 * scaleH);
   players = [
-    { name: "Player 1", color: "#ffd95b", x: left.x + left.width / 2, y: left.roofY - 16, r: pr },
-    { name: "Player 2", color: "#7ee6ff", x: right.x + right.width / 2, y: right.roofY - 16, r: pr },
+    { name: "Player 1", color: "#ffd95b", x: left.x + left.width / 2, y: left.roofY - foot, r: pr },
+    { name: "Player 2", color: "#7ee6ff", x: right.x + right.width / 2, y: right.roofY - foot, r: pr },
   ];
 
   wind = rand(-0.18, 0.18);

@@ -15,32 +15,35 @@
       its arc peak. Wind shifts every round.
     </p>
 
-    <section class="hud" aria-live="polite">
-      <div><strong>Turn:</strong> <span id="turnLabel">Player 1</span></div>
-      <div><strong>Wind:</strong> <span id="windLabel">0</span></div>
-      <div><strong>Score:</strong> <span id="scoreLabel">0 - 0</span></div>
-    </section>
+    <div class="fs-stage" id="viewport">
+      <section class="hud" aria-live="polite">
+        <div><strong>Turn:</strong> <span id="turnLabel">Player 1</span></div>
+        <div><strong>Wind:</strong> <span id="windLabel">0</span></div>
+        <div><strong>Score:</strong> <span id="scoreLabel">0 - 0</span></div>
+      </section>
 
-    <form id="shotForm" class="controls">
-      <label>
-        Angle
-        <input id="angleInput" type="number" min="0" max="90" step="1" value="45" required />
-      </label>
-      <label>
-        Power
-        <input id="powerInput" type="number" min="5" max="130" step="1" value="60" required />
-      </label>
-      <button id="fireBtn" type="submit">Throw Banana</button>
-      <button id="newRoundBtn" type="button">New Round</button>
-      <button id="fullscreenBtn" type="button">Full screen</button>
-    </form>
+      <form id="shotForm" class="controls">
+        <label>
+          Angle
+          <input id="angleInput" type="number" min="0" max="90" step="1" value="45" required />
+        </label>
+        <label>
+          Power
+          <input id="powerInput" type="number" min="5" max="130" step="1" value="60" required />
+        </label>
+        <button id="fireBtn" type="submit">Throw Banana</button>
+        <button id="newRoundBtn" type="button">New Round</button>
+        <button id="fullscreenBtn" type="button">Full screen</button>
+      </form>
 
-    <div class="viewport" id="viewport">
-      <canvas id="gameCanvas" width="1280" height="720" role="img" aria-label="Gorillas playfield"></canvas>
+      <p id="statusMsg" class="fs-status">Player 1 to throw.</p>
+
+      <div class="viewport">
+        <canvas id="gameCanvas" width="1280" height="720" role="img" aria-label="Gorillas playfield"></canvas>
+      </div>
     </div>
 
     <section class="panel">
-      <p id="statusMsg">Player 1 to throw.</p>
       <h2>High Scores</h2>
       <ol id="arcade-lb"></ol>
     </section>
