@@ -11,7 +11,7 @@
   const W = canvas.width;
   const H = canvas.height;
 
-  const LAUNCH = { x: W * 0.5, y: H - 46 };
+  const LAUNCH = { x: W * 0.5, y: 46 };
   const BALL_R = 7;
   const PEG_R = 11;
   const GRAVITY = 920;
@@ -27,7 +27,7 @@
   /** @type {"idle"|"flying"|"done"} */
   let phase = "idle";
   let mouseX = LAUNCH.x;
-  let mouseY = LAUNCH.y - 120;
+  let mouseY = LAUNCH.y + 120;
 
   /** @type {{x:number,y:number,vx:number,vy:number,bucketResolved?:boolean}|null} */
   let ball = null;
@@ -127,9 +127,9 @@
   function aimVector() {
     let dx = mouseX - LAUNCH.x;
     let dy = mouseY - LAUNCH.y;
-    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) dy = -1;
-    if (dy > -0.08) {
-      dy = -0.08;
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) dy = 1;
+    if (dy < 0.08) {
+      dy = 0.08;
     }
     const len = Math.hypot(dx, dy);
     dx /= len;
@@ -329,7 +329,7 @@
     }
 
     ctx.fillStyle = "rgba(255,255,255,0.08)";
-    ctx.fillRect(0, LAUNCH.y - 6, W, 8);
+    ctx.fillRect(0, LAUNCH.y - 2, W, 8);
 
     if (phase === "idle" || phase === "flying") {
       const dir = aimVector();
