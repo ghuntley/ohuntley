@@ -34,6 +34,13 @@ const DEFAULT_GAMES = [
     marquee: "#00fff2",
     screen: "#ff1493",
   },
+  {
+    slug: "peggle",
+    title: "PEGGLE-ISH",
+    blurb: "Aim · bounce pegs · buckets · orange bonus",
+    marquee: "#ff9100",
+    screen: "#7c4dff",
+  },
 ];
 
 function getGames() {
@@ -335,6 +342,7 @@ function bestScoreForGameSlug(slug) {
 
 function shortTitleForScoreboard(title) {
   const u = String(title).toUpperCase();
+  if (u.includes("PEGGLE")) return "PEGGLE";
   if (u.includes("MAZE")) return "MAZE";
   if (u.includes("MANOR")) return "MANOR";
   if (u.includes("MEERKAT") && u.includes("RUN")) return "MEERKAT";
@@ -350,7 +358,7 @@ function formatScoreboardNumber(n) {
 }
 
 function scoreboardRowsFromGames(games) {
-  const list = Array.isArray(games) ? games.slice(0, 5) : [];
+  const list = Array.isArray(games) ? games.slice(0, 6) : [];
   return list.map((g) => ({
     label: shortTitleForScoreboard(g.title || g.slug || "GAME"),
     value: formatScoreboardNumber(bestScoreForGameSlug(g.slug)),
