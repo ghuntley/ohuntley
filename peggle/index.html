@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peggle-ish — Funland Arcade</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="back" href="../index.html" title="Back to the arcade">Home</a>
+  <main class="shell">
+    <h1>Peggle-ish</h1>
+    <p class="sub">
+      Aim with the mouse, click to fire. Bounce off pegs, drop through a bucket for a big bonus, and clear the orange peg for extra points.
+      Ten shots per board — higher score wins a spot on the board.
+    </p>
+    <div class="stage-wrap">
+      <canvas id="game" width="800" height="560" tabindex="0" role="application" aria-label="Peggle playfield"></canvas>
+    </div>
+    <div class="hud">
+      <div>
+        Score: <strong id="scoreVal">0</strong>
+        · Shots: <strong id="shotsVal">10</strong>
+        · Level: <strong id="levelVal">1</strong>
+      </div>
+      <div class="controls">
+        <button type="button" id="restartBtn">Restart</button>
+      </div>
+    </div>
+    <p class="hint">
+      <kbd>R</kbd> restart when idle · Buckets at the bottom multiply your catch bonus
+    </p>
+    <section class="panel">
+      <h2>High scores</h2>
+      <ol id="arcade-lb"></ol>
+    </section>
+  </main>
+  <script src="../arcade-tokens.js"></script>
+  <script src="../arcade-scores.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

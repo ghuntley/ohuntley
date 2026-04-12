@@ -1,0 +1,150 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(ellipse 120% 80% at 50% 0%, #1a0a28 0%, #080510 55%, #040208 100%);
+  font-family: system-ui, "Segoe UI", sans-serif;
+  color: #e8e0f0;
+}
+
+a.back {
+  position: fixed;
+  top: 0.65rem;
+  left: 0.65rem;
+  z-index: 30;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  color: #7df9ff;
+  text-decoration: none;
+  text-shadow: 0 0 8px rgba(0, 255, 238, 0.45);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 238, 0.35);
+  background: rgba(8, 4, 16, 0.85);
+}
+
+a.back:hover {
+  color: #fff;
+}
+
+.shell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 3rem 0.75rem 1.5rem;
+}
+
+.shell h1 {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.35rem, 4vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, #ffb74d, #ff4081, #7c4dff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.sub {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  opacity: 0.88;
+  line-height: 1.45;
+}
+
+.stage-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px rgba(255, 64, 129, 0.35),
+    0 0 40px rgba(124, 77, 255, 0.2),
+    inset 0 0 60px rgba(0, 0, 0, 0.45);
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+  background: #0c0614;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.85rem;
+  font-size: 0.95rem;
+}
+
+.hud strong {
+  color: #ffecb3;
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.controls button {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 183, 77, 0.5);
+  background: rgba(255, 152, 0, 0.15);
+  color: #ffe082;
+}
+
+.controls button:hover {
+  background: rgba(255, 152, 0, 0.28);
+}
+
+.panel {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 10px;
+  background: rgba(12, 6, 22, 0.65);
+  border: 1px solid rgba(124, 77, 255, 0.25);
+}
+
+.panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: #b39ddb;
+}
+
+#arcade-lb {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+#arcade-lb li {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.hint kbd {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  font-family: inherit;
+  font-size: 0.9em;
+}
