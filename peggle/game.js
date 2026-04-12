@@ -45,7 +45,7 @@
     const list = [];
     const rows = 7 + Math.min(3, Math.floor(lv / 2));
     const cols = 11;
-    const top = 72 + (lv % 3) * 6;
+    const top = 76 + (lv % 3) * 6;
     const rowGap = (BUCKET_TOP - top - 40) / (rows - 0.5);
     const colGap = (W - 100) / (cols - 1);
     const baseX = 50;
