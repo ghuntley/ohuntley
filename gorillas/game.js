@@ -262,6 +262,70 @@ function collidesWithPlayer(x, y) {
   return -1;
 }
 
+/** Initial position and velocity for a shot (matches `fireShot` / `stepProjectile` physics). */
+function getShotPhysics(angleDeg, power, turnIdx) {
+  const shooter = players[turnIdx];
+  const worldAngle = turnIdx === 0 ? angleDeg : 180 - angleDeg;
+  const radians = (worldAngle * Math.PI) / 180;
+  const speed = clamp(power, 5, 130) * 0.15;
+  const halfH =
+    playerSpriteReady && playerImg.naturalWidth
+      ? PLAYER_DRAW_H / 2
+      : shooter.r + 2;
+  const vx = Math.cos(radians) * speed;
+  const vy = -Math.sin(radians) * speed;
+  return {
+    x: shooter.x,
+    y: shooter.y - halfH - 4,
+    vx,
+    vy,
+    launchSpeed: Math.hypot(vx, vy),
+  };
+}
+
+/** Ballistic path for the main warhead only (no MIRV split), until building, player, or OOB. */
+function sampleTrajectoryPreview(angleDeg, power, turnIdx) {
+  let { x, y, vx, vy } = getShotPhysics(angleDeg, power, turnIdx);
+  const pts = [{ x, y }];
+  const maxSteps = 400;
+  for (let step = 0; step < maxSteps; step += 1) {
+    vx += wind * 0.03;
+    vy += G;
+    x += vx;
+    y += vy;
+    if (x < -20 || x > W + 20 || y > H + 20 || y < -80) break;
+    if (collidesWithBuilding(x, y)) break;
+    if (collidesWithPlayer(x, y) !== -1) break;
+    pts.push({ x, y });
+  }
+  return pts;
+}
+
+function drawTrajectoryPreview() {
+  if (roundLocked || projectiles.length || players.length < 2) return;
+
+  const angle = Number(angleInput.value);
+  const power = Number(powerInput.value);
+  if (!Number.isFinite(angle) || !Number.isFinite(power)) return;
+
+  const pts = sampleTrajectoryPreview(clamp(angle, 0, 90), clamp(power, 5, 130), activeTurn);
+  if (pts.length < 2) return;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 224, 130, 0.34)";
+  ctx.lineWidth = Math.max(1, 1.35 * scaleH);
+  ctx.setLineDash([5 * scaleH, 6 * scaleH]);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i += 1) {
+    ctx.lineTo(pts[i].x, pts[i].y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 function swapTurn() {
   activeTurn = activeTurn === 0 ? 1 : 0;
   applySavedShotForTurn();
@@ -410,20 +474,15 @@ function fireShot(angleDeg, power) {
   if (roundLocked || projectiles.length) return;
 
   const shooter = players[activeTurn];
-  const worldAngle = activeTurn === 0 ? angleDeg : 180 - angleDeg;
-  const radians = (worldAngle * Math.PI) / 180;
-  const speed = clamp(power, 5, 130) * 0.15;
-  const halfH =
-    playerSpriteReady && playerImg.naturalWidth
-      ? PLAYER_DRAW_H / 2
-      : shooter.r + 2;
-  const vx = Math.cos(radians) * speed;
-  const vy = -Math.sin(radians) * speed;
-  const launchSpeed = Math.hypot(vx, vy);
+  const { x, y, vx, vy, launchSpeed } = getShotPhysics(
+    clamp(angleDeg, 0, 90),
+    clamp(power, 5, 130),
+    activeTurn,
+  );
   projectiles = [
     {
-      x: shooter.x,
-      y: shooter.y - halfH - 4,
+      x,
+      y,
       vx,
       vy,
       trail: [],
@@ -451,6 +510,7 @@ function tick() {
   }
 
   drawPlayers();
+  drawTrajectoryPreview();
   drawProjectile();
   drawBurst();
 
