@@ -56,8 +56,8 @@
         const y = top + row * rowGap;
         const roll = Math.random();
         let kind = "blue";
-        if (roll > 0.82) kind = "green";
-        else if (roll > 0.94) kind = "purple";
+        if (roll > 0.94) kind = "purple";
+        else if (roll > 0.82) kind = "green";
         list.push({ x, y, r: PEG_R, kind, alive: true });
       }
     }
@@ -199,6 +199,7 @@
     if (shotsLeft <= 0) {
       const orangeLeft = pegs.some((p) => p.alive && p.kind === "orange");
       if (!orangeLeft) score += 800;
+      syncHud();
       finalizeGame();
       return;
     }
