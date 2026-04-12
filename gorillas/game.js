@@ -476,38 +476,36 @@ newRoundBtn.addEventListener("click", () => {
   }
 });
 
-function fullscreenActive() {
-  return Boolean(
-    document.fullscreenElement ||
-      document.webkitFullscreenElement ||
-      document.msFullscreenElement,
-  );
+const FS_EXPAND_CLASS = "fs-expand";
+const FS_BODY_LOCK = "fs-expand-lock";
+
+function gameIsExpanded() {
+  return Boolean(viewport?.classList.contains(FS_EXPAND_CLASS));
+}
+
+function setGameExpanded(on) {
+  if (!viewport) return;
+  viewport.classList.toggle(FS_EXPAND_CLASS, on);
+  document.body.classList.toggle(FS_BODY_LOCK, on);
 }
 
 function syncFullscreenButton() {
   if (!fullscreenBtn) return;
-  fullscreenBtn.textContent = fullscreenActive() ? "Exit full screen" : "Full screen";
+  fullscreenBtn.textContent = gameIsExpanded() ? "Exit full screen" : "Full screen";
 }
 
 if (fullscreenBtn && viewport) {
   fullscreenBtn.addEventListener("click", () => {
-    if (fullscreenActive()) {
-      const exit =
-        document.exitFullscreen ||
-        document.webkitExitFullscreen ||
-        document.msExitFullscreen;
-      exit?.call(document);
-      return;
-    }
-    const req =
-      viewport.requestFullscreen ||
-      viewport.webkitRequestFullscreen ||
-      viewport.msRequestFullscreen;
-    req?.call(viewport);
+    setGameExpanded(!gameIsExpanded());
+    syncFullscreenButton();
   });
-  document.addEventListener("fullscreenchange", syncFullscreenButton);
-  document.addEventListener("webkitfullscreenchange", syncFullscreenButton);
-  document.addEventListener("MSFullscreenChange", syncFullscreenButton);
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!gameIsExpanded()) return;
+    setGameExpanded(false);
+    syncFullscreenButton();
+    e.preventDefault();
+  });
   syncFullscreenButton();
 }
 

@@ -10,10 +10,15 @@ body {
   color: #eef2ff;
 }
 
+body.fs-expand-lock {
+  overflow: hidden;
+}
+
 .back {
   position: fixed;
   top: 0.75rem;
   left: 0.75rem;
+  z-index: 1100;
   color: #9bd4ff;
   text-decoration: none;
   border: 1px solid #3e6a9a;
@@ -99,8 +104,11 @@ h1 {
   opacity: 0.92;
 }
 
-.fs-stage:fullscreen,
-.fs-stage:-webkit-full-screen {
+/* In-page expand (no Fullscreen API) so exiting never drops browser/window fullscreen. */
+.fs-stage.fs-expand {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
   display: flex;
   flex-direction: column;
   width: 100vw;
@@ -114,18 +122,15 @@ h1 {
   overflow: hidden;
 }
 
-.fs-stage:fullscreen .hud,
-.fs-stage:-webkit-full-screen .hud {
+.fs-stage.fs-expand .hud {
   margin-bottom: 0.5rem;
 }
 
-.fs-stage:fullscreen .controls,
-.fs-stage:-webkit-full-screen .controls {
+.fs-stage.fs-expand .controls {
   margin-bottom: 0.45rem;
 }
 
-.fs-stage:fullscreen .fs-status,
-.fs-stage:-webkit-full-screen .fs-status {
+.fs-stage.fs-expand .fs-status {
   margin-bottom: 0.4rem;
   flex-shrink: 0;
 }
@@ -141,16 +146,14 @@ h1 {
   box-sizing: border-box;
 }
 
-.fs-stage:fullscreen .viewport,
-.fs-stage:-webkit-full-screen .viewport {
+.fs-stage.fs-expand .viewport {
   flex: 1;
   min-height: 0;
   border-radius: 10px;
   padding: 0.25rem;
 }
 
-.fs-stage:fullscreen .viewport canvas,
-.fs-stage:-webkit-full-screen .viewport canvas {
+.fs-stage.fs-expand .viewport canvas {
   width: auto;
   height: auto;
   max-width: 100%;
