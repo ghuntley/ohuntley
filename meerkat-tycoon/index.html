@@ -328,6 +328,16 @@
     .trad-taken { opacity: 0.55; }
     .trad-taken button { background: #6a8f6e !important; }
     kbd { background: #ddd; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+    .meerkat-games-credits {
+      margin: 18px 0 0;
+      padding-top: 12px;
+      border-top: 1px solid rgba(92, 64, 51, 0.35);
+      font-size: 0.82rem;
+      color: var(--burrow);
+      opacity: 0.88;
+      max-width: 920px;
+    }
+    .meerkat-games-credits strong { font-weight: 700; color: var(--earth); }
   </style>
 </head>
 <body>
@@ -504,6 +514,10 @@
   </div>
 
   <div class="log" id="log" aria-live="polite"></div>
+
+  <footer class="meerkat-games-credits" aria-label="Credits">
+    <strong>Meerkat games</strong> — Boo, fin, mia, mic
+  </footer>
 
   <script src="../arcade-tokens.js"></script>
   <script src="../arcade-scores.js"></script>

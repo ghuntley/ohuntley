@@ -297,6 +297,35 @@
       display: block;
     }
 
+    #arcade-credits {
+      position: fixed;
+      bottom: 0.55rem;
+      left: 0.65rem;
+      z-index: 11;
+      max-width: min(22rem, 90vw);
+      margin: 0;
+      padding: 0;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      color: rgba(200, 224, 255, 0.82);
+      text-align: left;
+      text-shadow: 0 0 10px rgba(0, 0, 0, 0.85);
+      pointer-events: none;
+    }
+
+    #arcade-credits .arcade-credits-studio {
+      font-family: "Press Start 2P", monospace;
+      font-size: clamp(0.26rem, 1.1vw, 0.38rem);
+      letter-spacing: 0.1em;
+      color: #7df9ff;
+      margin: 0 0 0.2rem;
+    }
+
+    #arcade-credits .arcade-credits-names {
+      margin: 0;
+      opacity: 0.92;
+    }
+
     #hint {
       position: fixed;
       bottom: 0.75rem;
@@ -627,6 +656,13 @@
         screen: "#e8c088",
       },
       {
+        slug: "gorillas",
+        title: "GORILLAS",
+        blurb: "Classic BAS clone · artillery bananas · shifting wind",
+        marquee: "#ffd54f",
+        screen: "#4fc3f7",
+      },
+      {
         slug: "grapple",
         title: "SKYHOOK",
         blurb: "Three.js grapple · swing to the gold platform",
@@ -647,6 +683,10 @@
       <kbd>T</kbd> again or <kbd>Esc</kbd> closes the prize counter · Earn tokens in games · spend them with Rita
     </p>
   </div>
+  <footer id="arcade-credits" aria-label="Credits">
+    <p class="arcade-credits-studio">Meerkat games</p>
+    <p class="arcade-credits-names">Boo, fin, mia, mic</p>
+  </footer>
   <div id="token-bar" class="token-bar" aria-live="polite">
     <span class="token-icon" aria-hidden="true">⬡</span>
     <span id="souvenir-slot" class="souvenir-slot" aria-hidden="true"></span>
