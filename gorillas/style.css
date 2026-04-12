@@ -1,0 +1,153 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #1f2742, #090b13 65%);
+  color: #eef2ff;
+}
+
+.back {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  color: #9bd4ff;
+  text-decoration: none;
+  border: 1px solid #3e6a9a;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  background: rgba(10, 14, 28, 0.6);
+}
+
+.game-shell {
+  max-width: min(1480px, 96vw);
+  margin: 0 auto;
+  padding: 2rem 1rem 2.5rem;
+}
+
+h1 {
+  margin: 0 0 0.3rem;
+}
+
+.subtitle {
+  margin: 0 0 1rem;
+  opacity: 0.86;
+}
+
+.hud {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.hud div {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  padding: 0.35rem 0.55rem;
+  min-width: 9rem;
+}
+
+.controls {
+  display: flex;
+  gap: 0.8rem;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.controls input {
+  width: 6rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #3f4d75;
+  background: #0f1425;
+  color: #eef2ff;
+}
+
+.controls button {
+  padding: 0.52rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #395f88;
+  background: #1b3252;
+  color: #f2f7ff;
+  cursor: pointer;
+}
+
+.controls button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.viewport {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  border-radius: 12px;
+  background: rgba(5, 8, 18, 0.35);
+  padding: 0.35rem;
+  box-sizing: border-box;
+}
+
+.viewport:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  margin: 0;
+  padding: 0.5rem;
+  border-radius: 0;
+  background: #050812;
+}
+
+.viewport:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  margin: 0;
+  padding: 0.5rem;
+  border-radius: 0;
+  background: #050812;
+}
+
+.viewport:fullscreen canvas,
+.viewport:-webkit-full-screen canvas {
+  width: min(100vw - 1rem, calc((100vh - 1rem) * 16 / 9));
+  height: min(calc((100vw - 1rem) * 9 / 16), 100vh - 1rem);
+  max-height: calc(100vh - 1rem);
+  max-width: calc(100vw - 1rem);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.45);
+  background: #0f1630;
+}
+
+.panel {
+  margin-top: 0.9rem;
+}
+
+#statusMsg {
+  margin: 0.35rem 0 0.6rem;
+}
+
+#arcade-lb {
+  margin-top: 0.45rem;
+  padding-left: 1.4rem;
+}
