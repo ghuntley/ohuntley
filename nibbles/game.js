@@ -167,6 +167,7 @@
   }
 
   function tryQueueDir(newDir) {
+    if ((newDir + 2) % 4 === dir) return;
     queuedDir = newDir;
   }
 
@@ -175,6 +176,7 @@
       if (!playing || gameOver) return;
       paused = !paused;
       pauseOverlay.hidden = !paused;
+      if (!paused) lastTick = performance.now();
       e.preventDefault();
       return;
     }
@@ -250,7 +252,7 @@
       }
       spawnFood();
       if (food.digit === 0 && food.x < 0) {
-        /* no room — win-ish: stop growth ticks */
+        growDebt = 0;
       }
     }
 
