@@ -1,0 +1,154 @@
+@import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 1rem 1rem 2rem;
+  background: linear-gradient(160deg, #0a0a18 0%, #12122a 45%, #0d1520 100%);
+  color: #c8e6c9;
+  font-family: "VT323", ui-monospace, monospace;
+  font-size: 1.25rem;
+}
+
+.back {
+  align-self: flex-start;
+  margin-bottom: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  color: #80cbc4;
+  text-decoration: none;
+  border: 1px solid rgba(128, 203, 196, 0.35);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.back:hover {
+  background: rgba(128, 203, 196, 0.12);
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-weight: 400;
+  font-size: 2rem;
+  letter-spacing: 0.06em;
+  color: #69f0ae;
+}
+
+.subtitle {
+  margin: 0 0 1rem;
+  max-width: 42rem;
+  text-align: center;
+  color: #9fa8da;
+  font-size: 1.1rem;
+  line-height: 1.35;
+}
+
+.shell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.canvas-wrap {
+  border: 3px solid #37474f;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 2px #1de9b6,
+    0 12px 40px rgba(0, 0, 0, 0.55);
+  background: #000080;
+}
+
+#gameCanvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  max-width: 100%;
+  height: auto;
+}
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.75rem;
+  justify-content: center;
+  font-size: 1.35rem;
+}
+
+.hud span {
+  color: #fff59d;
+}
+
+.shortcuts {
+  margin-top: 0.75rem;
+  text-align: center;
+  color: #90a4ae;
+  font-size: 1.05rem;
+}
+
+.shortcuts kbd {
+  display: inline-block;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  font-family: inherit;
+}
+
+.panel {
+  min-width: 14rem;
+  padding: 1rem 1.1rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: #80deea;
+}
+
+#arcade-lb {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 1.1rem;
+  color: #b0bec5;
+}
+
+#arcade-lb li {
+  margin: 0.25rem 0;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  color: #e0f7fa;
+  font-size: 1.75rem;
+  text-align: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.overlay-inner {
+  max-width: 22rem;
+  line-height: 1.4;
+}
+
+.overlay-inner strong {
+  color: #69f0ae;
+}

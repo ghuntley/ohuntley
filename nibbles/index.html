@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nibbles</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="back" href="../index.html" title="Back to the arcade">Home</a>
+
+  <h1>Nibbles</h1>
+  <p class="subtitle">
+    QBasic-style snake on a grid — eat the digits for points and length. Avoid walls, your tail, and the
+    maze blocks as levels climb.
+  </p>
+
+  <div class="shell">
+    <div>
+      <div class="hud" aria-live="polite">
+        <div>Score: <span id="scoreVal">0</span></div>
+        <div>Level: <span id="levelVal">1</span></div>
+        <div>Length: <span id="lenVal">3</span></div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas
+          id="gameCanvas"
+          width="640"
+          height="400"
+          tabindex="0"
+          role="application"
+          aria-label="Nibbles playfield — arrow keys or WASD"
+        ></canvas>
+      </div>
+      <p class="shortcuts">
+        <kbd>Arrows</kbd> or <kbd>WASD</kbd> · <kbd>Space</kbd> start · <kbd>P</kbd> pause ·
+        <kbd>R</kbd> restart
+      </p>
+    </div>
+
+    <aside class="panel">
+      <h2>High Scores</h2>
+      <ol id="arcade-lb"></ol>
+    </aside>
+  </div>
+
+  <div id="pauseOverlay" class="overlay" hidden>
+    <div class="overlay-inner"><strong>Paused</strong><br />Press <kbd>P</kbd> or <kbd>Esc</kbd> to continue</div>
+  </div>
+
+  <script src="../arcade-tokens.js"></script>
+  <script src="../arcade-scores.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
