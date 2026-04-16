@@ -28,6 +28,13 @@ const DEFAULT_GAMES = [
     screen: "#e8c088",
   },
   {
+    slug: "nibbles",
+    title: "NIBBLES",
+    blurb: "QBasic snake · digits for length · maze levels",
+    marquee: "#00e676",
+    screen: "#304ffe",
+  },
+  {
     slug: "grapple",
     title: "SKYHOOK",
     blurb: "Three.js grapple · swing to the gold platform",
