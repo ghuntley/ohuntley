@@ -19,11 +19,6 @@ const H = canvas.height;
 const scaleH = H / 540;
 const G = 0.24;
 const BANANA_R = Math.max(5, 5 * scaleH);
-/** Main warhead splits into this many bananas at apex or when speed drops. */
-const MIRV_COUNT = 6;
-const MIRV_SPREAD_RAD = 0.92;
-const MIRV_CHILD_SPEED = 0.54;
-const MIRV_LOW_POWER_FRAC = 0.42;
 /** Scaled sprite height on canvas (natural asset 263×192). */
 const PLAYER_DRAW_H = Math.round(52 * scaleH);
 const playerImg = new Image();
@@ -37,7 +32,7 @@ let buildings = [];
 let players = [];
 let activeTurn = 0;
 let wind = 0;
-/** @type {Array<{x:number,y:number,vx:number,vy:number,trail:Array<{x:number,y:number}>,angle:number,canSplit:boolean,launchSpeed:number,age:number}>} */
+/** @type {Array<{x:number,y:number,vx:number,vy:number,trail:Array<{x:number,y:number}>,angle:number}>} */
 let projectiles = [];
 let burst = null;
 let roundLocked = false;
@@ -202,7 +197,7 @@ function drawProjectile() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const p of projectiles) {
-    const fontPx = Math.round((p.childBanana ? 28 : 38) * scaleH);
+    const fontPx = Math.round(38 * scaleH);
     ctx.font = `${fontPx}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif`;
     ctx.save();
     ctx.translate(p.x, p.y);
@@ -279,11 +274,10 @@ function getShotPhysics(angleDeg, power, turnIdx) {
     y: shooter.y - halfH - 4,
     vx,
     vy,
-    launchSpeed: Math.hypot(vx, vy),
   };
 }
 
-/** Ballistic path for the main warhead only (no MIRV split), until building, player, or OOB. */
+/** Ballistic path preview until building, player, or out-of-bounds. */
 function sampleTrajectoryPreview(angleDeg, power, turnIdx) {
   let { x, y, vx, vy } = getShotPhysics(angleDeg, power, turnIdx);
   const pts = [{ x, y }];
@@ -365,55 +359,13 @@ function awardHit(winner) {
   setTimeout(() => generateRound(), 1200);
 }
 
-function buildMirvChildren(p) {
-  const spd = Math.hypot(p.vx, p.vy);
-  const baseAng = Math.atan2(p.vy, p.vx);
-  const sp = Math.max(0.9, spd);
-  const n = MIRV_COUNT;
-  const out = [];
-  for (let k = 0; k < n; k += 1) {
-    const u = n <= 1 ? 0 : k / (n - 1) - 0.5;
-    const ang = baseAng + u * MIRV_SPREAD_RAD;
-    const cs = Math.max(1.35, sp * MIRV_CHILD_SPEED);
-    out.push({
-      x: p.x,
-      y: p.y,
-      vx: Math.cos(ang) * cs,
-      vy: Math.sin(ang) * cs,
-      trail: [],
-      angle: p.angle + rand(-0.45, 0.45),
-      canSplit: false,
-      launchSpeed: 0,
-      age: 0,
-      childBanana: true,
-    });
-  }
-  return out;
-}
-
 function stepProjectile() {
   if (!projectiles.length) return;
 
   for (let i = projectiles.length - 1; i >= 0; i -= 1) {
     const p = projectiles[i];
-    const wasVy = p.vy;
     p.vx += wind * 0.03;
     p.vy += G;
-    p.age += 1;
-
-    const spd = Math.hypot(p.vx, p.vy);
-    const apexSplit =
-      p.canSplit && wasVy < -0.025 && p.vy >= -0.025;
-    const lowPowerSplit =
-      p.canSplit &&
-      p.age > 14 &&
-      p.vy > 0.06 &&
-      spd < p.launchSpeed * MIRV_LOW_POWER_FRAC;
-
-    if (apexSplit || lowPowerSplit) {
-      projectiles.splice(i, 1, ...buildMirvChildren(p));
-      continue;
-    }
 
     p.x += p.vx;
     p.y += p.vy;
@@ -474,7 +426,7 @@ function fireShot(angleDeg, power) {
   if (roundLocked || projectiles.length) return;
 
   const shooter = players[activeTurn];
-  const { x, y, vx, vy, launchSpeed } = getShotPhysics(
+  const { x, y, vx, vy } = getShotPhysics(
     clamp(angleDeg, 0, 90),
     clamp(power, 5, 130),
     activeTurn,
@@ -487,15 +439,11 @@ function fireShot(angleDeg, power) {
       vy,
       trail: [],
       angle: 0,
-      canSplit: true,
-      launchSpeed,
-      age: 0,
-      childBanana: false,
     },
   ];
   roundLocked = true;
   fireBtn.disabled = true;
-  updateHud(`${shooter.name} throws MIRV…`);
+  updateHud(`${shooter.name} throws...`);
 }
 
 function tick() {
