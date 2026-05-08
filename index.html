@@ -4,9 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FUNLAND ARCADE — 1980s 3D lobby</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <link href="./vendor/fonts/fonts.css" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -627,8 +625,8 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      "three": "./vendor/three/build/three.module.js",
+      "three/addons/": "./vendor/three/examples/jsm/"
     }
   }
   </script>
@@ -745,5 +743,6 @@
   <script src="./arcade-tokens.js"></script>
   <script src="./arcade-scores.js"></script>
   <script type="module" src="./arcade-3d.js"></script>
+  <script src="/sw-register.js"></script>
 </body>
 </html>
