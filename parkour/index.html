@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neon Drift — Parkour</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #06040c;
+      font-family: system-ui, sans-serif;
+      color: #eaf6ff;
+    }
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    a.home {
+      position: fixed;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 20;
+      color: #ff7ad6;
+      text-decoration: none;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 10px rgba(255, 20, 147, 0.55);
+    }
+    a.home:hover { color: #fff; }
+
+    #blocker {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      background:
+        radial-gradient(ellipse 75% 55% at 50% 35%, rgba(255, 20, 147, 0.18), transparent 55%),
+        radial-gradient(ellipse 55% 45% at 50% 80%, rgba(0, 255, 238, 0.10), transparent 55%),
+        rgba(6, 4, 12, 0.92);
+      cursor: pointer;
+      text-align: center;
+      padding: 1rem;
+    }
+    #blocker h1 {
+      margin: 0 0 0.25rem;
+      font-size: clamp(1.35rem, 5vw, 2.25rem);
+      letter-spacing: 0.12em;
+      color: #ff5cd2;
+      text-shadow:
+        0 0 12px rgba(255, 20, 147, 0.85),
+        0 0 28px rgba(255, 0, 128, 0.5);
+    }
+    #blocker .sub {
+      margin: 0 0 0.6rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.4em;
+      color: #7df9ff;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.55);
+    }
+    #blocker p {
+      margin: 0.2rem 0;
+      max-width: 32rem;
+      line-height: 1.55;
+      font-size: 0.95rem;
+      opacity: 0.92;
+    }
+    #blocker kbd {
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 20, 147, 0.45);
+      box-shadow: 0 0 8px rgba(255, 20, 147, 0.18);
+      color: #fff;
+      font-family: inherit;
+    }
+
+    #hud {
+      position: fixed;
+      top: 0.75rem;
+      right: 0.75rem;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.15rem;
+      pointer-events: none;
+      text-shadow: 0 0 10px rgba(0, 0, 0, 0.85);
+      font-variant-numeric: tabular-nums;
+    }
+    #hud .timer {
+      font-size: 1.6rem;
+      letter-spacing: 0.05em;
+      color: #ffe66e;
+      text-shadow: 0 0 12px rgba(255, 224, 130, 0.75);
+    }
+    #hud .row {
+      font-size: 0.85rem;
+      color: #c8f4ff;
+      opacity: 0.92;
+    }
+    #hud .row b { color: #ff8ad6; font-weight: 600; }
+
+    #toast {
+      position: fixed;
+      left: 50%;
+      top: 22%;
+      transform: translate(-50%, -50%);
+      z-index: 6;
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(10, 6, 22, 0.78);
+      border: 1px solid rgba(255, 20, 147, 0.45);
+      color: #ffd166;
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
+      box-shadow: 0 0 20px rgba(255, 20, 147, 0.25);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    #finish {
+      position: fixed;
+      inset: 0;
+      z-index: 12;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4, 2, 10, 0.78);
+      padding: 1rem;
+    }
+    #finish.show { display: flex; }
+    .finish-card {
+      max-width: 26rem;
+      width: 100%;
+      padding: 1.4rem 1.5rem 1.6rem;
+      border-radius: 14px;
+      background: linear-gradient(165deg, #2a0a3a 0%, #11061c 60%, #06040c 100%);
+      border: 1px solid rgba(255, 20, 147, 0.5);
+      box-shadow: 0 0 40px rgba(255, 20, 147, 0.25);
+      text-align: center;
+    }
+    .finish-card h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.4rem;
+      color: #ff66c4;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 14px rgba(255, 20, 147, 0.7);
+    }
+    .finish-card .big {
+      font-size: 2.1rem;
+      color: #ffe66e;
+      margin: 0.4rem 0 0.6rem;
+      text-shadow: 0 0 14px rgba(255, 224, 130, 0.65);
+      font-variant-numeric: tabular-nums;
+    }
+    .finish-card .stats {
+      margin: 0.25rem 0 1rem;
+      color: #c8f4ff;
+      opacity: 0.9;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .finish-card .stats b { color: #ff8ad6; font-weight: 600; }
+    .finish-card ol {
+      list-style: none;
+      margin: 0 0 1rem;
+      padding: 0;
+      max-height: 9rem;
+      overflow-y: auto;
+      text-align: left;
+      font-size: 0.9rem;
+      color: #aabfd8;
+    }
+    .finish-card ol li {
+      padding: 0.18rem 0.5rem;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+    }
+    .finish-card ol li:first-child { color: #ffe66e; }
+    .finish-card .actions {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .finish-card button,
+    .finish-card a {
+      padding: 0.45rem 0.95rem;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 255, 238, 0.55);
+      background: rgba(0, 255, 238, 0.12);
+      color: #c8f4ff;
+      cursor: pointer;
+      font: inherit;
+      text-decoration: none;
+    }
+    .finish-card button:hover,
+    .finish-card a:hover { background: rgba(0, 255, 238, 0.22); color: #fff; }
+
+    @media (pointer: coarse) {
+      #blocker p.desktop-only { display: none; }
+      #blocker .touch-only { display: block; }
+    }
+    .touch-only {
+      display: none;
+      color: #ff8ad6;
+      text-shadow: 0 0 10px rgba(255, 20, 147, 0.45);
+    }
+
+    #level-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+      gap: 0.55rem;
+      max-width: 32rem;
+      width: 100%;
+      margin: 0.5rem 0 0.25rem;
+    }
+    .level-btn {
+      padding: 0.55rem 0.65rem 0.65rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 20, 147, 0.4);
+      background: rgba(10, 6, 22, 0.7);
+      color: #c8f4ff;
+      cursor: pointer;
+      font: inherit;
+      text-align: center;
+      transition: transform 0.08s ease, border-color 0.15s, box-shadow 0.15s;
+      box-shadow: 0 0 14px rgba(255, 20, 147, 0.15);
+    }
+    .level-btn:hover:not(:disabled) {
+      border-color: rgba(0, 255, 238, 0.7);
+      box-shadow: 0 0 18px rgba(0, 255, 238, 0.35);
+    }
+    .level-btn:active:not(:disabled) { transform: scale(0.97); }
+    .level-btn:disabled {
+      cursor: default;
+      opacity: 0.55;
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+    }
+    .level-btn.active {
+      border-color: #ffe066;
+      box-shadow: 0 0 18px rgba(255, 224, 102, 0.45);
+      background: rgba(40, 20, 5, 0.7);
+    }
+    .level-btn .num {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: #7df9ff;
+      text-shadow: 0 0 8px rgba(0, 255, 255, 0.45);
+    }
+    .level-btn .name {
+      font-size: 0.95rem;
+      color: #fff;
+      margin: 0.15rem 0 0.25rem;
+      letter-spacing: 0.04em;
+    }
+    .level-btn .best {
+      font-size: 0.78rem;
+      color: #ffe066;
+      font-variant-numeric: tabular-nums;
+      opacity: 0.92;
+    }
+    .level-btn:disabled .best { color: #aaa; }
+
+    #hud .level {
+      font-size: 0.78rem;
+      letter-spacing: 0.2em;
+      color: #7df9ff;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.55);
+      margin-bottom: 0.1rem;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "../vendor/three/build/three.module.js",
+      "three/addons/": "../vendor/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <a class="home" href="../index.html">← Arcade</a>
+  <div id="blocker">
+    <h1>NEON DRIFT</h1>
+    <p class="sub">3RD-PERSON · ROOFTOP PARKOUR</p>
+    <p><kbd>W A S D</kbd> run · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump (twice for double-jump)</p>
+    <p class="desktop-only">Mouse moves the camera · click to lock pointer · <kbd>R</kbd> respawn at last beacon · <kbd>Esc</kbd> pause</p>
+    <p>Reach the gold platform · grab cyan shards for bonus tokens · don't fall.</p>
+    <p class="touch-only">Best on a desktop with mouse + keyboard.</p>
+    <div id="level-grid" aria-label="Level select"></div>
+    <p class="sub" id="best-line"></p>
+  </div>
+  <div id="hud" aria-live="polite">
+    <div class="level" id="hud-level">L1 · ROOFTOP RUN</div>
+    <div class="timer" id="hud-timer">00.00</div>
+    <div class="row">Shards <b id="hud-shards">0 / 0</b></div>
+    <div class="row">Checkpoint <b id="hud-cp">1</b></div>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="finish">
+    <div class="finish-card" role="dialog" aria-labelledby="finish-title">
+      <h2 id="finish-title">COURSE CLEARED</h2>
+      <p class="big" id="finish-time">00.00</p>
+      <p class="stats" id="finish-stats"></p>
+      <ol id="finish-lb"></ol>
+      <div class="actions">
+        <button type="button" id="finish-next" hidden>Next level</button>
+        <button type="button" id="finish-retry">Run again</button>
+        <a href="../index.html">Back to arcade</a>
+      </div>
+    </div>
+  </div>
+  <canvas id="game-canvas"></canvas>
+  <script src="../arcade-tokens.js"></script>
+  <script src="../arcade-scores.js"></script>
+  <script type="module" src="./parkour-game.js"></script>
+  <script src="/sw-register.js"></script>
+</body>
+</html>

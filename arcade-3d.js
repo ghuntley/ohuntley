@@ -48,6 +48,13 @@ const DEFAULT_GAMES = [
     marquee: "#ff9100",
     screen: "#7c4dff",
   },
+  {
+    slug: "shooter",
+    title: "VECTOR STRIKE",
+    blurb: "Three.js FPS · neon arena · waves · headshots",
+    marquee: "#ff5cd2",
+    screen: "#00fff2",
+  },
 ];
 
 function getGames() {
@@ -465,6 +472,71 @@ function makeTextTexture(lines, opts = {}) {
   return tex;
 }
 
+/**
+ * Floating cabinet title — transparent canvas with a glowing neon banner.
+ * Sprites use this so the label always faces the camera and reads from any
+ * angle in the lobby.
+ */
+function makeFloatingTitleTexture(title, cssColor) {
+  const w = 768;
+  const h = 192;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+
+  const cleanHex =
+    typeof cssColor === "string" && /^#?[0-9a-f]{6}$/i.test(cssColor)
+      ? cssColor.startsWith("#") ? cssColor : "#" + cssColor
+      : "#ff66c4";
+  const r = parseInt(cleanHex.slice(1, 3), 16);
+  const g = parseInt(cleanHex.slice(3, 5), 16);
+  const b = parseInt(cleanHex.slice(5, 7), 16);
+  const rgba = (a) => `rgba(${r},${g},${b},${a})`;
+
+  // Soft radial halo behind the text so the label feels lit.
+  const grad = ctx.createRadialGradient(w / 2, h / 2, 12, w / 2, h / 2, h * 0.85);
+  grad.addColorStop(0, rgba(0.42));
+  grad.addColorStop(0.55, rgba(0.14));
+  grad.addColorStop(1, rgba(0));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  const text = String(title || "").toUpperCase();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Auto-shrink so long titles still fit. Monospace font keeps the look
+  // consistent with the rest of the arcade canvas signage.
+  let size = 92;
+  ctx.font = `bold ${size}px monospace`;
+  while (ctx.measureText(text).width > w - 56 && size > 36) {
+    size -= 4;
+    ctx.font = `bold ${size}px monospace`;
+  }
+
+  // Outer glow (in marquee color), then a bright white core, then a thin
+  // dark stroke for legibility against pale walls.
+  ctx.shadowColor = cleanHex;
+  ctx.shadowBlur = 38;
+  ctx.fillStyle = cleanHex;
+  ctx.fillText(text, w / 2, h / 2);
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(text, w / 2, h / 2);
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
+  ctx.strokeText(text, w / 2, h / 2);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 function wrapText(ctx, text, x, y, maxW, lineH) {
   const words = text.split(/\s+/);
   let line = "";
@@ -575,6 +647,26 @@ function createCabinet(game, spec, isHero) {
   );
   bezel.position.set(0, 1.02 * scale, 0.41 * scale);
   group.add(bezel);
+
+  // Floating title — Sprite billboards always face the camera so the label
+  // is readable from anywhere on the arcade floor.
+  const titleTex = makeFloatingTitleTexture(game.title, game.marquee);
+  const titleSprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: titleTex,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+    })
+  );
+  const titleW = (isHero ? 2.1 : 1.9) * scale;
+  titleSprite.scale.set(titleW, titleW * 0.25, 1);
+  const titleBaseY = (isHero ? 2.6 : 2.42) * scale;
+  titleSprite.position.set(0, titleBaseY, 0);
+  titleSprite.renderOrder = 5;
+  group.add(titleSprite);
+  group.userData.titleSprite = titleSprite;
+  group.userData.titleBaseY = titleBaseY;
 
   const legL = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.2 * scale, 0.12 * scale), dark);
   legL.position.set(-0.52 * scale, 0.1 * scale, 0.32 * scale);
@@ -2462,6 +2554,23 @@ function startArcade() {
           const phase = (i / Math.max(1, n - 1)) * Math.PI * 2;
           const wave = 0.5 + 0.5 * Math.sin(et * 3.4 - phase * 2.2);
           bulbs[i].emissiveIntensity = 0.1 + wave * 1.02;
+        }
+      }
+    }
+
+    // Floating cabinet titles — gentle bob & glow pulse.
+    if (cabinets?.length) {
+      for (let i = 0; i < cabinets.length; i++) {
+        const cab = cabinets[i];
+        const sp = cab.userData.titleSprite;
+        if (!sp) continue;
+        const baseY = cab.userData.titleBaseY ?? 2.4;
+        if (reduceMotionOn) {
+          sp.position.y = baseY;
+          sp.material.opacity = 0.95;
+        } else {
+          sp.position.y = baseY + Math.sin(et * 1.4 + i * 0.7) * 0.06;
+          sp.material.opacity = 0.86 + Math.sin(et * 2.1 + i * 1.1) * 0.1;
         }
       }
     }

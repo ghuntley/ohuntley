@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8" />
+<title>Arcade auto-player runs</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: #0a0610;
+    color: #e0e0f0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  h1 { color: #ff6eb4; text-shadow: 0 0 12px rgba(255,20,147,0.45); margin: 0 0 6px; }
+  p.lede { margin: 0 0 16px; color: #c8e0ff; opacity: 0.85; }
+  #player {
+    margin: 0 auto 24px;
+    max-width: 1180px;
+    background: rgba(8, 4, 16, 0.85);
+    border: 1px solid rgba(255, 20, 147, 0.45);
+    border-radius: 16px;
+    padding: 14px 14px 16px;
+    box-shadow: 0 0 40px rgba(255, 20, 147, 0.18);
+  }
+  #player header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  #player h2 { margin: 0; color: #7df9ff; letter-spacing: 0.05em; font-size: 18px; }
+  #player video { width: 100%; border-radius: 10px; margin-top: 10px; background: black; }
+  #player nav { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  #player nav button {
+    padding: 6px 12px;
+    font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: rgba(0, 255, 238, 0.12);
+    color: #b2fef9;
+    border: 1px solid rgba(0, 255, 238, 0.45);
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
+  #player nav button[aria-pressed="true"] {
+    background: rgba(255, 20, 147, 0.25);
+    color: #ffeaf2;
+    border-color: rgba(255, 20, 147, 0.7);
+  }
+  #player .meta { font-size: 14px; color: #ffe082; }
+  .grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+  .card {
+    background: rgba(20, 12, 32, 0.85);
+    border: 1px solid rgba(0,255,238,0.25);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .card header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .card h2 { margin: 0; color: #7df9ff; font-size: 16px; letter-spacing: 0.05em; }
+  .meta { font-size: 13px; color: #c8e0ff; opacity: 0.85; display: flex; gap: 14px; }
+  .score { color: #ffe082; }
+  video { width: 100%; border-radius: 8px; margin-top: 10px; background: black; }
+  .err { color: #ff8a80; margin-top: 8px; font-size: 13px; }
+</style>
+</head><body>
+  <h1>Arcade auto-player runs</h1>
+  <p class="lede">All seven games played back-to-back. Scores below reflect what each game awarded the bot.</p>
+
+  <section id="player">
+    <header>
+      <h2 id="now-playing">Loading…</h2>
+      <div class="meta" id="now-score"></div>
+    </header>
+    <video id="reel" controls preload="auto" autoplay playsinline></video>
+    <nav id="reel-nav"></nav>
+  </section>
+
+  <h2 style="color:#7df9ff;letter-spacing:0.05em;">Individual runs</h2>
+  <div class="grid">
+        <section class="card">
+          <header>
+            <h2>NIBBLES — auto-pilot</h2>
+            <div class="meta">
+              <span class="score">Score 505</span>
+              <span class="time">61.0s</span>
+            </div>
+          </header>
+          <video controls preload="metadata" src="nibbles/nibbles.webm" width="640"></video>
+          
+        </section>
+        
+
+        <section class="card">
+          <header>
+            <h2>MAZE RUNNER — solver</h2>
+            <div class="meta">
+              <span class="score">Score 62,500</span>
+              <span class="time">87.0s</span>
+            </div>
+          </header>
+          <video controls preload="metadata" src="maze/maze.webm" width="640"></video>
+          
+        </section>
+        
+
+        <section class="card">
+          <header>
+            <h2>PEGGLE-ISH — aim assist</h2>
+            <div class="meta">
+              <span class="score">Score 4,200</span>
+              <span class="time">77.9s</span>
+            </div>
+          </header>
+          <video controls preload="metadata" src="peggle/peggle.webm" width="640"></video>
+          
+        </section>
+        
+
+        <section class="card">
+          <header>
+            <h2>GORILLAS — ballistics</h2>
+            <div class="meta">
+              <span class="score">Score 600</span>
+              <span class="time">26.8s</span>
+            </div>
+          </header>
+          <video controls preload="metadata" src="gorillas/gorillas.webm" width="640"></video>
+          
+        </section>
+        
+
+        <section class="card">
+          <header>
+            <h2>MEERKAT RUN — auto-jump</h2>
+            <div class="meta">
+              <span class="score">Score 284</span>
+              <span class="time">99.9s</span>
+            </div>
+          </header>
+          <video controls preload="metadata" src="meerkat/meerkat.webm" width="640"></video>
+          
+        </section>
+        
+
+        <section class="card">
+          <header>
+            <h2>MEERKAT MANOR — colony sim</h2>
+            <div class="meta">
+              <span class="score">Score 765</span>
+              <span class="time">113.7s</span>
+            </div>
+          </header>
+          <video controls preload="metadata" src="meerkat-tycoon/meerkat-tycoon.webm" width="640"></video>
+          
+        </section>
+        
+
+        <section class="card">
+          <header>
+            <h2>SKYHOOK — demo flight</h2>
+            <div class="meta">
+              <span class="score">Score 28</span>
+              <span class="time">31.7s</span>
+            </div>
+          </header>
+          <video controls preload="metadata" src="grapple/grapple.webm" width="640"></video>
+          
+        </section>
+        </div>
+
+  <script>
+    const playlist = [{"title": "NIBBLES \u2014 auto-pilot", "src": "nibbles/nibbles.webm", "score": 505}, {"title": "MAZE RUNNER \u2014 solver", "src": "maze/maze.webm", "score": 62500}, {"title": "PEGGLE-ISH \u2014 aim assist", "src": "peggle/peggle.webm", "score": 4200}, {"title": "GORILLAS \u2014 ballistics", "src": "gorillas/gorillas.webm", "score": 600}, {"title": "MEERKAT RUN \u2014 auto-jump", "src": "meerkat/meerkat.webm", "score": 284}, {"title": "MEERKAT MANOR \u2014 colony sim", "src": "meerkat-tycoon/meerkat-tycoon.webm", "score": 765}, {"title": "SKYHOOK \u2014 demo flight", "src": "grapple/grapple.webm", "score": 28}];
+    const reel = document.getElementById('reel');
+    const nav = document.getElementById('reel-nav');
+    const titleEl = document.getElementById('now-playing');
+    const scoreEl = document.getElementById('now-score');
+    let cursor = 0;
+
+    function show(i) {
+      if (!playlist.length) {
+        titleEl.textContent = 'No videos recorded.';
+        return;
+      }
+      cursor = ((i % playlist.length) + playlist.length) % playlist.length;
+      const item = playlist[cursor];
+      reel.src = item.src;
+      reel.play().catch(() => {});
+      titleEl.textContent = item.title;
+      scoreEl.textContent = item.score == null ? '' : 'Score ' + item.score.toLocaleString();
+      [...nav.children].forEach((b, idx) => {
+        b.setAttribute('aria-pressed', String(idx === cursor));
+      });
+    }
+
+    playlist.forEach((item, idx) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = item.title.split('—')[0].trim();
+      b.addEventListener('click', () => show(idx));
+      nav.appendChild(b);
+    });
+
+    reel.addEventListener('ended', () => show(cursor + 1));
+
+    if (playlist.length) show(0);
+  </script>
+</body></html>

@@ -12,7 +12,7 @@
  *     lobby loads even when no specific page is cached.
  */
 
-const VERSION = "funland-arcade-v3";
+const VERSION = "funland-arcade-v6";
 
 const PRECACHE_URLS = [
   "/",
@@ -63,10 +63,21 @@ const PRECACHE_URLS = [
   "/meerkat/meerkat-ref.png",
   "/meerkat-tycoon/",
   "/meerkat-tycoon/index.html",
+  "/nibbles/",
+  "/nibbles/index.html",
+  "/nibbles/game.js",
+  "/nibbles/style.css",
+  "/parkour/",
+  "/parkour/index.html",
+  "/parkour/parkour-game.js",
   "/peggle/",
   "/peggle/index.html",
   "/peggle/game.js",
   "/peggle/style.css",
+  "/shooter/",
+  "/shooter/index.html",
+  "/shooter/game.js",
+  "/shooter/gunshot.mp3",
 ];
 
 self.addEventListener("install", (event) => {

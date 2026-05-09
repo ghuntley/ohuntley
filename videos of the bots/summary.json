@@ -1,0 +1,58 @@
+[
+  {
+    "slug": "nibbles",
+    "title": "NIBBLES \u2014 auto-pilot",
+    "score": 505,
+    "elapsed": 61.0,
+    "video": "nibbles/nibbles.webm",
+    "error": null
+  },
+  {
+    "slug": "maze",
+    "title": "MAZE RUNNER \u2014 solver",
+    "score": 62500,
+    "elapsed": 87.0,
+    "video": "maze/maze.webm",
+    "error": null
+  },
+  {
+    "slug": "peggle",
+    "title": "PEGGLE-ISH \u2014 aim assist",
+    "score": 4200,
+    "elapsed": 77.9,
+    "video": "peggle/peggle.webm",
+    "error": null
+  },
+  {
+    "slug": "gorillas",
+    "title": "GORILLAS \u2014 ballistics",
+    "score": 600,
+    "elapsed": 26.8,
+    "video": "gorillas/gorillas.webm",
+    "error": null
+  },
+  {
+    "slug": "meerkat",
+    "title": "MEERKAT RUN \u2014 auto-jump",
+    "score": 284,
+    "elapsed": 99.9,
+    "video": "meerkat/meerkat.webm",
+    "error": null
+  },
+  {
+    "slug": "meerkat-tycoon",
+    "title": "MEERKAT MANOR \u2014 colony sim",
+    "score": 765,
+    "elapsed": 113.7,
+    "video": "meerkat-tycoon/meerkat-tycoon.webm",
+    "error": null
+  },
+  {
+    "slug": "grapple",
+    "title": "SKYHOOK \u2014 demo flight",
+    "score": 28,
+    "elapsed": 31.7,
+    "video": "grapple/grapple.webm",
+    "error": null
+  }
+]
