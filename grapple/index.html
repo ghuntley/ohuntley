@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Skyhook — Grapple</title>
+  <title>Skyhook — Data Heist</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -40,60 +40,179 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(0, 200, 255, 0.12), transparent 55%),
-        rgba(6, 4, 12, 0.92);
+      background: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(0, 200, 255, 0.14), transparent 55%),
+        radial-gradient(ellipse 40% 30% at 70% 80%, rgba(255, 20, 147, 0.10), transparent 60%),
+        rgba(6, 4, 12, 0.94);
       cursor: pointer;
       text-align: center;
-      padding: 1rem;
+      padding: 1.25rem;
     }
     #blocker h1 {
-      margin: 0 0 0.5rem;
-      font-size: clamp(1.1rem, 4vw, 1.75rem);
-      letter-spacing: 0.08em;
+      margin: 0 0 0.35rem;
+      font-size: clamp(1.4rem, 5vw, 2.4rem);
+      letter-spacing: 0.18em;
       color: #00fff2;
-      text-shadow: 0 0 20px rgba(0, 255, 238, 0.6);
+      text-shadow: 0 0 24px rgba(0, 255, 238, 0.7), 0 0 4px rgba(0, 255, 238, 0.9);
+    }
+    #blocker .tag {
+      margin: 0 0 1rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.5em;
+      color: #ff66cc;
+      text-shadow: 0 0 10px rgba(255, 20, 147, 0.7);
+      text-transform: uppercase;
+    }
+    #blocker .lore {
+      max-width: 32rem;
+      margin: 0 0 1rem;
+      line-height: 1.55;
+      font-size: 0.95rem;
+      opacity: 0.92;
+      font-style: italic;
+      color: #d8f6ff;
     }
     #blocker p {
       margin: 0.25rem 0;
-      max-width: 28rem;
+      max-width: 32rem;
       line-height: 1.5;
-      font-size: 0.95rem;
-      opacity: 0.9;
+      font-size: 0.9rem;
+      opacity: 0.85;
     }
     #blocker kbd {
-      padding: 0.1em 0.35em;
+      padding: 0.1em 0.4em;
       border-radius: 4px;
       background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(0, 255, 238, 0.35);
+      border: 1px solid rgba(0, 255, 238, 0.4);
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+    }
+    #blocker .play {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.3em;
+      color: #ffd700;
+      text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+    #hud-top {
+      position: fixed;
+      top: 0.7rem;
+      right: 0.9rem;
+      z-index: 5;
+      text-align: right;
+      pointer-events: none;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.06em;
+      text-shadow: 0 0 8px rgba(0, 255, 238, 0.45), 0 1px 2px rgba(0,0,0,0.85);
+    }
+    #shard-counter {
+      color: #66ffe5;
+      font-size: 0.85rem;
+      margin-bottom: 0.15rem;
+    }
+    #shard-counter b { color: #fff; }
+    #timer {
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    #best {
+      color: #c8f4ff;
+      opacity: 0.65;
+      font-size: 0.7rem;
+      margin-top: 0.1rem;
     }
     #hud {
       position: fixed;
-      bottom: 0.75rem;
+      bottom: 0.9rem;
       left: 50%;
       transform: translateX(-50%);
       z-index: 5;
-      font-size: 0.8rem;
-      opacity: 0.85;
+      font-size: 0.85rem;
+      opacity: 0.9;
       pointer-events: none;
       text-align: center;
       text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+      max-width: 90vw;
     }
+    #toast {
+      position: fixed;
+      top: 35%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.85);
+      z-index: 6;
+      font-size: 1.4rem;
+      letter-spacing: 0.18em;
+      color: #00fff2;
+      text-shadow: 0 0 18px rgba(0, 255, 238, 0.8);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.4s cubic-bezier(.2,.8,.2,1);
+      text-align: center;
+      white-space: nowrap;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    #toast.gold { color: #ffd700; text-shadow: 0 0 24px rgba(255, 215, 0, 0.85); }
+    #vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      background: radial-gradient(ellipse 80% 65% at 50% 50%, transparent 50%, rgba(0,0,0,0.55) 100%);
+      mix-blend-mode: multiply;
+    }
+    #damage-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(255, 20, 80, 0.35) 100%);
+      opacity: 0;
+      transition: opacity 0.18s;
+    }
+    #damage-flash.on { opacity: 1; }
     #crosshair {
       position: fixed;
       left: 50%;
       top: 50%;
-      width: 10px;
-      height: 10px;
-      margin: -5px 0 0 -5px;
-      border: 1px solid rgba(0, 255, 238, 0.7);
+      width: 14px;
+      height: 14px;
+      margin: -7px 0 0 -7px;
+      border: 1px solid rgba(0, 255, 238, 0.55);
       border-radius: 50%;
       z-index: 5;
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.15s;
+      transition: opacity 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.12s;
     }
-    body.locked #crosshair {
-      opacity: 1;
+    #crosshair::after {
+      content: "";
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: currentColor;
+      color: rgba(0, 255, 238, 0.6);
+      opacity: 0.65;
+    }
+    body.locked #crosshair { opacity: 1; }
+    #crosshair.target {
+      border-color: #ffd700;
+      color: #ffd700;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+      transform: scale(1.25);
+    }
+    #crosshair.hooked {
+      border-color: #ff66cc;
+      color: #ff66cc;
+      box-shadow: 0 0 14px rgba(255, 20, 147, 0.85);
+      transform: scale(0.7);
     }
   </style>
   <script type="importmap">
@@ -108,12 +227,28 @@
 <body>
   <a class="home" href="../index.html">← Arcade</a>
   <div id="blocker">
+    <p class="tag">// Skyhook Couriers · Job 0451</p>
     <h1>SKYHOOK</h1>
-    <p>Click to play · <kbd>W A S D</kbd> move · <kbd>Space</kbd> jump · mouse look</p>
-    <p><kbd>LMB</kbd> fire / release grapple · <kbd>R</kbd> release rope · <kbd>Esc</kbd> pause</p>
-    <p>Hook the cyan neon surfaces — reach the gold platform.</p>
+    <p class="lore">
+      Year 2087. The Archive seizes every memory at midnight.
+      Hijack the twelve data shards scattered across the neon
+      skyline, then ride the uplink atop the central spire
+      before the city scrubs your trail.
+    </p>
+    <p><kbd>W A S D</kbd> traverse · <kbd>Space</kbd> jump · move the mouse to look</p>
+    <p>Hold <kbd>LMB</kbd> to swing · release to let go · <kbd>R</kbd> emergency drop · <kbd>Esc</kbd> pause</p>
+    <p>Hook the cyan and magenta neon. Collect <span id="blocker-shard-count">5</span> shards to unlock the uplink.</p>
+    <p class="play">CLICK TO JACK IN</p>
   </div>
+  <div id="vignette"></div>
+  <div id="damage-flash"></div>
   <div id="crosshair" aria-hidden="true"></div>
+  <div id="hud-top">
+    <div id="shard-counter">SHARDS <b>0</b> / 12</div>
+    <div id="timer">00.00</div>
+    <div id="best">BEST —</div>
+  </div>
+  <div id="toast" aria-hidden="true"></div>
   <p id="hud" role="status"></p>
   <canvas id="game-canvas"></canvas>
   <script type="module" src="./grapple-game.js"></script>
