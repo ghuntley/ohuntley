@@ -1,0 +1,888 @@
+:root {
+  --pink: #ff5cd2;
+  --pink-soft: #ff8be0;
+  --magenta: #ff1493;
+  --cyan: #00fff2;
+  --cyan-soft: #80f5ff;
+  --gold: #ffe27a;
+  --warn: #ff5252;
+  --bg-1: #0a0612;
+  --bg-2: #170a26;
+  --bg-3: #260e3d;
+  --panel: rgba(20, 8, 36, 0.78);
+  --panel-line: rgba(255, 92, 210, 0.35);
+  --panel-line-soft: rgba(255, 92, 210, 0.18);
+  --text: #ffe9f4;
+  --muted: rgba(255, 233, 244, 0.65);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(ellipse at top, var(--bg-3), var(--bg-1) 70%);
+  color: var(--text);
+  font-family: "VT323", "Press Start 2P", monospace;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  overflow-x: hidden;
+}
+
+html[data-touch-compatible="true"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-touch-compatible="true"] .anvil,
+html[data-touch-compatible="true"] .store-item,
+html[data-touch-compatible="true"] .ascend-btn,
+html[data-touch-compatible="true"] .bottom-bar .ghost,
+html[data-touch-compatible="true"] .modal-actions button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.touch-device .anvil {
+  width: min(400px, 78%);
+}
+
+html.touch-device .store-item {
+  min-height: 3.25rem;
+  padding: 0.75rem 0.8rem;
+}
+
+html.touch-device .bottom-bar .ghost,
+html.touch-device .ascend-btn {
+  min-height: 2.75rem;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+html.touch-device .store-list,
+html.touch-device .achievement-list {
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.back-link {
+  position: fixed;
+  top: 0.85rem;
+  left: 0.85rem;
+  z-index: 50;
+  color: var(--cyan-soft);
+  text-decoration: none;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(0, 255, 238, 0.45);
+  border-radius: 6px;
+  background: rgba(8, 4, 16, 0.65);
+  text-shadow: 0 0 8px rgba(0, 255, 238, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.back-link:hover {
+  background: rgba(0, 255, 238, 0.1);
+  color: #fff;
+}
+
+/* === Background === */
+.forge-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: 40% -20% -40% -20%;
+  background:
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 92, 210, 0.32) 0,
+      rgba(255, 92, 210, 0.32) 1px,
+      transparent 1px,
+      transparent 60px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 255, 238, 0.22) 0,
+      rgba(0, 255, 238, 0.22) 1px,
+      transparent 1px,
+      transparent 60px
+    );
+  transform: perspective(700px) rotateX(60deg);
+  transform-origin: top center;
+  filter: drop-shadow(0 0 12px rgba(255, 20, 147, 0.5));
+  animation: gridScroll 12s linear infinite;
+}
+
+@keyframes gridScroll {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 0 60px, 0 60px; }
+}
+
+.bg-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.7) 50%, transparent 60%),
+    radial-gradient(1px 1px at 28% 35%, rgba(255, 138, 224, 0.85) 50%, transparent 60%),
+    radial-gradient(1px 1px at 44% 12%, rgba(0, 255, 238, 0.85) 50%, transparent 60%),
+    radial-gradient(1px 1px at 62% 22%, rgba(255, 255, 255, 0.55) 50%, transparent 60%),
+    radial-gradient(1px 1px at 76% 8%, rgba(255, 226, 122, 0.65) 50%, transparent 60%),
+    radial-gradient(1px 1px at 88% 30%, rgba(255, 138, 224, 0.55) 50%, transparent 60%),
+    radial-gradient(1px 1px at 8% 38%, rgba(0, 255, 238, 0.4) 50%, transparent 60%),
+    radial-gradient(1px 1px at 95% 42%, rgba(255, 226, 122, 0.5) 50%, transparent 60%);
+  filter: drop-shadow(0 0 6px rgba(255, 138, 224, 0.4));
+  opacity: 0.85;
+}
+
+.bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(8, 2, 16, 0.55) 100%);
+}
+
+/* === Layout === */
+.forge-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4.25rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.topbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.2rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(38, 14, 61, 0.85), rgba(15, 6, 30, 0.85));
+  border: 1px solid var(--panel-line);
+  box-shadow:
+    0 0 24px rgba(255, 20, 147, 0.18),
+    inset 0 0 18px rgba(0, 255, 238, 0.06);
+}
+
+.title-block h1 {
+  margin: 0;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: clamp(1rem, 3vw, 1.45rem);
+  letter-spacing: 0.18em;
+  color: #fff;
+  text-shadow:
+    0 0 8px rgba(255, 92, 210, 0.85),
+    0 0 22px rgba(255, 20, 147, 0.55);
+}
+
+.title-block .subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+  color: var(--cyan-soft);
+  text-shadow: 0 0 8px rgba(0, 255, 238, 0.45);
+  opacity: 0.92;
+}
+
+.resource-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.res {
+  flex: 1 1 8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 92, 210, 0.25);
+  background: rgba(8, 3, 18, 0.72);
+}
+
+.res-label {
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pink);
+  text-shadow: 0 0 6px rgba(255, 92, 210, 0.6);
+}
+
+.res-value {
+  font-size: 1.55rem;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(255, 226, 122, 0.55);
+}
+
+.res.rate .res-value { color: var(--cyan-soft); text-shadow: 0 0 12px rgba(0, 255, 238, 0.5); }
+.res.shards .res-value { color: var(--gold); text-shadow: 0 0 12px rgba(255, 226, 122, 0.7); }
+
+/* === Stage === */
+.forge-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 1.4rem;
+  align-items: stretch;
+  padding: 1.5rem;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  box-shadow:
+    0 0 36px rgba(255, 20, 147, 0.18),
+    inset 0 0 24px rgba(0, 255, 238, 0.06);
+}
+
+.anvil-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.anvil-rings {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.anvil-rings .ring {
+  position: absolute;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 92, 210, 0.45);
+  box-shadow:
+    0 0 18px rgba(255, 92, 210, 0.35),
+    inset 0 0 12px rgba(0, 255, 238, 0.18);
+  animation: ringPulse 6s ease-in-out infinite;
+}
+.anvil-rings .r1 { animation-delay: 0s; }
+.anvil-rings .r2 { animation-delay: -2s; width: 50%; border-color: rgba(0, 255, 238, 0.5); }
+.anvil-rings .r3 { animation-delay: -4s; width: 35%; border-color: rgba(255, 226, 122, 0.55); }
+
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(1.06); opacity: 0.85; }
+}
+
+.anvil {
+  position: relative;
+  width: min(360px, 62%);
+  aspect-ratio: 1;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  filter: drop-shadow(0 0 18px rgba(255, 20, 147, 0.55));
+  transition: transform 0.05s ease, filter 0.15s ease;
+}
+
+.anvil:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 8px;
+  border-radius: 12px;
+}
+
+.anvil:hover {
+  filter: drop-shadow(0 0 26px rgba(255, 92, 210, 0.7));
+}
+
+.anvil:active,
+.anvil.struck {
+  transform: translateY(2px) scale(0.97);
+}
+
+.anvil-svg {
+  width: 100%;
+  height: auto;
+}
+
+.anvil-ember {
+  animation: emberFlicker 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes emberFlicker {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+.anvil-hint {
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(255, 226, 122, 0.65);
+  opacity: 0.9;
+  animation: hintPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.anvil.has-clicked .anvil-hint {
+  display: none;
+}
+
+.floaters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* Stage stats */
+.stage-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  align-self: stretch;
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(8, 3, 18, 0.55);
+  border: 1px solid rgba(0, 255, 238, 0.18);
+}
+
+.stat-label {
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.4rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cyan-soft);
+  text-shadow: 0 0 6px rgba(0, 255, 238, 0.45);
+}
+
+.stat strong {
+  font-size: 1.15rem;
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(255, 226, 122, 0.55);
+  font-weight: 400;
+}
+
+/* === Panels === */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.2rem;
+  align-items: start;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem 1.1rem 1.2rem;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  box-shadow:
+    0 0 22px rgba(255, 20, 147, 0.12),
+    inset 0 0 18px rgba(0, 255, 238, 0.04);
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  color: var(--pink);
+  text-shadow: 0 0 8px rgba(255, 92, 210, 0.5);
+}
+
+.panel-head .panel-sub {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.panel-head.ascension-head {
+  margin-top: 0.4rem;
+}
+
+.muted { color: var(--muted); }
+
+/* Store list (generators / upgrades) */
+.store-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+
+.store-list.compact {
+  max-height: 220px;
+}
+
+.store-list::-webkit-scrollbar { width: 8px; }
+.store-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.25); border-radius: 6px; }
+.store-list::-webkit-scrollbar-thumb { background: rgba(255, 92, 210, 0.45); border-radius: 6px; }
+.store-list::-webkit-scrollbar-thumb:hover { background: rgba(255, 92, 210, 0.7); }
+
+.store-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(8, 3, 18, 0.7);
+  border: 1px solid rgba(0, 255, 238, 0.18);
+  cursor: pointer;
+  transition: border-color 0.12s ease, transform 0.06s ease, background 0.12s ease;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+}
+
+.store-item:hover:not(:disabled):not(.locked) {
+  border-color: rgba(255, 92, 210, 0.55);
+  background: rgba(28, 8, 50, 0.85);
+}
+
+.store-item:active:not(:disabled):not(.locked) {
+  transform: translateY(1px);
+}
+
+.store-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.store-item.affordable {
+  border-color: rgba(0, 255, 238, 0.55);
+  box-shadow: 0 0 10px rgba(0, 255, 238, 0.18);
+}
+
+.store-item.locked {
+  filter: grayscale(0.4);
+  opacity: 0.55;
+  cursor: default;
+}
+
+.store-item .store-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: #0a0612;
+  background: linear-gradient(135deg, var(--pink), var(--cyan));
+  box-shadow: 0 0 10px rgba(255, 92, 210, 0.45);
+}
+
+.store-item .store-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.store-item .store-name {
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(255, 92, 210, 0.5);
+}
+
+.store-item .store-flavor {
+  font-size: 0.95rem;
+  color: var(--muted);
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.store-item .store-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--cyan-soft);
+}
+
+.store-item .store-meta strong {
+  color: var(--gold);
+  font-weight: 400;
+}
+
+.store-item .store-buy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.store-item .store-cost {
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.5rem;
+  color: var(--gold);
+  text-shadow: 0 0 6px rgba(255, 226, 122, 0.5);
+}
+
+.store-item .store-owned {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Ascension */
+.ascend-info {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.ascend-btn {
+  align-self: stretch;
+  padding: 0.7rem 0.9rem;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  color: #0a0612;
+  background: linear-gradient(135deg, var(--gold), var(--pink));
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(255, 226, 122, 0.45);
+  transition: transform 0.06s ease, filter 0.15s ease;
+}
+
+.ascend-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.ascend-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ascend-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: linear-gradient(135deg, #444, #222);
+  color: #aaa;
+  box-shadow: none;
+}
+
+/* Achievements */
+.achievement-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr));
+  gap: 0.4rem;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+
+.achievement-list::-webkit-scrollbar { width: 8px; }
+.achievement-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.25); border-radius: 6px; }
+.achievement-list::-webkit-scrollbar-thumb { background: rgba(0, 255, 238, 0.4); border-radius: 6px; }
+
+.achievement {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: rgba(8, 3, 18, 0.7);
+  border: 1px solid rgba(255, 92, 210, 0.2);
+  display: grid;
+  place-items: center;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.55rem;
+  color: var(--muted);
+  text-align: center;
+  position: relative;
+  cursor: help;
+}
+
+.achievement.unlocked {
+  background: linear-gradient(135deg, rgba(255, 92, 210, 0.4), rgba(0, 255, 238, 0.3));
+  border-color: rgba(255, 226, 122, 0.85);
+  color: #0a0612;
+  box-shadow: 0 0 10px rgba(255, 226, 122, 0.45);
+}
+
+.achievement-tooltip {
+  position: absolute;
+  top: -0.4rem;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  width: max-content;
+  max-width: 14rem;
+  padding: 0.45rem 0.55rem;
+  background: rgba(6, 3, 14, 0.95);
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  font-family: "VT323", monospace;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 5;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.achievement-tooltip strong {
+  color: var(--gold);
+  display: block;
+}
+
+.achievement:hover .achievement-tooltip,
+.achievement:focus .achievement-tooltip {
+  opacity: 1;
+}
+
+/* Floaters & particles */
+.particle-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  overflow: hidden;
+}
+
+.floater {
+  position: absolute;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  text-shadow:
+    0 0 6px rgba(255, 226, 122, 0.85),
+    0 0 16px rgba(255, 92, 210, 0.4);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: floaterFly 0.95s ease-out forwards;
+  white-space: nowrap;
+}
+
+@keyframes floaterFly {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(0) scale(0.85);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(-10px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(-90px) scale(1.05);
+  }
+}
+
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: particleFly 0.7s ease-out forwards;
+  --dx: 0px;
+  --dy: 0px;
+}
+
+@keyframes particleFly {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* Bottom bar */
+.bottom-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--panel-line-soft);
+  background: rgba(8, 3, 18, 0.72);
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.bottom-bar .ghost {
+  background: rgba(255, 92, 210, 0.08);
+  color: var(--cyan-soft);
+  border: 1px solid rgba(255, 92, 210, 0.35);
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.18em;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.bottom-bar .ghost:hover { background: rgba(255, 92, 210, 0.18); }
+.bottom-bar .ghost.danger {
+  color: #ffb4b4;
+  border-color: rgba(255, 80, 80, 0.55);
+  background: rgba(80, 0, 20, 0.4);
+}
+.bottom-bar .ghost.danger:hover { background: rgba(120, 10, 40, 0.55); }
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 1, 10, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal[hidden] { display: none; }
+
+.modal-card {
+  width: min(28rem, 100%);
+  padding: 1.4rem 1.4rem 1.2rem;
+  border-radius: 14px;
+  background: linear-gradient(165deg, rgba(38, 14, 61, 0.97), rgba(15, 6, 30, 0.97));
+  border: 1px solid var(--panel-line);
+  box-shadow:
+    0 0 30px rgba(255, 20, 147, 0.4),
+    inset 0 0 22px rgba(0, 255, 238, 0.06);
+}
+
+.modal-card h2 {
+  margin: 0 0 0.5rem;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--pink);
+  text-shadow: 0 0 10px rgba(255, 92, 210, 0.6);
+}
+
+.modal-card p {
+  margin: 0.4rem 0;
+  font-size: 1.05rem;
+  color: var(--cyan-soft);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.modal-actions button {
+  padding: 0.55rem 1rem;
+  font-family: "Press Start 2P", "VT323", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modal-actions .ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--cyan-soft);
+  border: 1px solid rgba(255, 92, 210, 0.4);
+}
+
+.modal-actions .primary {
+  background: linear-gradient(135deg, var(--gold), var(--pink));
+  color: #0a0612;
+  border: 0;
+  box-shadow: 0 0 14px rgba(255, 226, 122, 0.5);
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%) translateY(120%);
+  z-index: 90;
+  padding: 0.65rem 1rem;
+  background: rgba(8, 3, 18, 0.92);
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  font-size: 1rem;
+  color: var(--text);
+  box-shadow: 0 0 18px rgba(255, 92, 210, 0.35);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  max-width: 90vw;
+  white-space: pre-line;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  body { font-size: 16px; }
+  .forge-shell { padding-top: 4.5rem; }
+  .forge-stage {
+    grid-template-columns: 1fr;
+  }
+  .panels { grid-template-columns: 1fr; }
+  .store-list { max-height: 360px; }
+}

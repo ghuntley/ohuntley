@@ -12,7 +12,7 @@
  *     lobby loads even when no specific page is cached.
  */
 
-const VERSION = "funland-arcade-v6";
+const VERSION = "funland-arcade-v8";
 
 const PRECACHE_URLS = [
   "/",
@@ -78,6 +78,13 @@ const PRECACHE_URLS = [
   "/shooter/index.html",
   "/shooter/game.js",
   "/shooter/gunshot.mp3",
+  "/clicker/",
+  "/clicker/index.html",
+  "/clicker/game.js",
+  "/clicker/style.css",
+  "/audiosurf/",
+  "/audiosurf/index.html",
+  "/audiosurf/audiosurf-game.js",
 ];
 
 self.addEventListener("install", (event) => {
