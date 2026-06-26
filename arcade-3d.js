@@ -55,6 +55,13 @@ const DEFAULT_GAMES = [
     marquee: "#ff5cd2",
     screen: "#00fff2",
   },
+  {
+    slug: "clicker",
+    title: "NEON FORGE",
+    blurb: "Idle clicker · auto-smiths · ascend for shards",
+    marquee: "#ffe27a",
+    screen: "#ff5cd2",
+  },
 ];
 
 function getGames() {

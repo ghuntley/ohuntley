@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-touch-compatible="true">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Neon Forge — Idle Clicker</title>
+  <link rel="stylesheet" href="../vendor/fonts/fonts.css" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <a class="back-link" href="../index.html" title="Back to the arcade">← Arcade</a>
+
+  <main class="forge-shell" id="forgeShell">
+    <div class="forge-bg" aria-hidden="true">
+      <div class="bg-grid"></div>
+      <div class="bg-stars" id="bgStars"></div>
+      <div class="bg-vignette"></div>
+    </div>
+
+    <header class="topbar" role="banner">
+      <div class="title-block">
+        <h1>NEON FORGE</h1>
+        <p class="subtitle">Strike the anvil. Hire the forge. Inscribe the sky.</p>
+      </div>
+      <div class="resource-line" aria-live="polite">
+        <div class="res sparks">
+          <span class="res-label">Sparks</span>
+          <span class="res-value" id="sparksVal">0</span>
+        </div>
+        <div class="res rate">
+          <span class="res-label">per second</span>
+          <span class="res-value" id="rateVal">0</span>
+        </div>
+        <div class="res shards">
+          <span class="res-label">Shards</span>
+          <span class="res-value" id="shardsVal">0</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="forge-stage">
+      <div class="anvil-area">
+        <div class="anvil-rings" aria-hidden="true">
+          <span class="ring r1"></span>
+          <span class="ring r2"></span>
+          <span class="ring r3"></span>
+        </div>
+        <button id="anvilBtn" class="anvil" aria-label="Strike the anvil">
+          <svg class="anvil-svg" viewBox="0 0 220 220" aria-hidden="true">
+            <defs>
+              <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#3a2a48" />
+                <stop offset="0.55" stop-color="#1a1028" />
+                <stop offset="1" stop-color="#0a0612" />
+              </linearGradient>
+              <linearGradient id="topGloss" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ff8aff" stop-opacity="0.9" />
+                <stop offset="0.5" stop-color="#ff5cd2" stop-opacity="0.65" />
+                <stop offset="1" stop-color="#5d1a55" stop-opacity="0.85" />
+              </linearGradient>
+              <radialGradient id="hotspot" cx="0.5" cy="0.5" r="0.55">
+                <stop offset="0" stop-color="#fff7c0" stop-opacity="0.9" />
+                <stop offset="0.45" stop-color="#ffe27a" stop-opacity="0.6" />
+                <stop offset="1" stop-color="#ff5cd2" stop-opacity="0" />
+              </radialGradient>
+              <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="3" />
+                <feMerge>
+                  <feMergeNode />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <!-- Anvil base -->
+            <rect x="58" y="158" width="104" height="22" rx="3" fill="url(#metal)" stroke="#ff5cd2" stroke-width="1.5" />
+            <!-- Anvil pillar -->
+            <rect x="84" y="118" width="52" height="42" fill="url(#metal)" stroke="#80f5ff" stroke-width="1.2" />
+            <!-- Anvil top (with two horns) -->
+            <path d="M30 90 L60 88 Q70 86 80 90 L140 90 Q150 86 160 88 L190 90 L195 110 Q160 120 110 120 Q60 120 25 110 Z"
+                  fill="url(#metal)" stroke="#ff5cd2" stroke-width="1.6" />
+            <!-- Top gloss highlight -->
+            <path d="M40 90 L70 90 Q90 92 110 92 Q130 92 150 90 L180 90 L182 99 Q140 105 110 105 Q80 105 38 99 Z"
+                  fill="url(#topGloss)" opacity="0.85" />
+            <!-- Hot ember on anvil top -->
+            <ellipse class="anvil-ember" cx="110" cy="98" rx="42" ry="11" fill="url(#hotspot)" filter="url(#glow)" />
+            <!-- Trace lines -->
+            <line x1="62" y1="180" x2="158" y2="180" stroke="#00fff2" stroke-width="1" opacity="0.55" />
+            <line x1="84" y1="158" x2="136" y2="158" stroke="#00fff2" stroke-width="1" opacity="0.5" />
+          </svg>
+          <span class="anvil-hint" id="anvilHint">Click the anvil</span>
+        </button>
+        <div class="floaters" id="floaters" aria-hidden="true"></div>
+      </div>
+
+      <div class="stage-stats">
+        <div class="stat">
+          <span class="stat-label">Click power</span>
+          <strong id="clickPowerVal">1</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Total clicks</span>
+          <strong id="clicksVal">0</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Lifetime sparks</span>
+          <strong id="totalSparksVal">0</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Run time</span>
+          <strong id="runTimeVal">0:00</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Ascensions</span>
+          <strong id="ascensionsVal">0</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="panels">
+      <article class="panel" aria-label="Generators">
+        <header class="panel-head">
+          <h2>Generators</h2>
+          <span class="panel-sub">Buy auto-smiths to forge while you focus.</span>
+        </header>
+        <ul id="generatorList" class="store-list"></ul>
+      </article>
+
+      <article class="panel" aria-label="Upgrades and ascension">
+        <header class="panel-head">
+          <h2>Upgrades</h2>
+          <span class="panel-sub">Permanent multipliers for this run.</span>
+        </header>
+        <ul id="upgradeList" class="store-list compact"></ul>
+
+        <header class="panel-head ascension-head">
+          <h2>Ascension</h2>
+          <span class="panel-sub">Reset the run for permanent shards.</span>
+        </header>
+        <p id="ascendInfo" class="ascend-info"></p>
+        <button id="ascendBtn" class="ascend-btn" type="button">Ascend</button>
+      </article>
+
+      <article class="panel" aria-label="Achievements">
+        <header class="panel-head">
+          <h2>Achievements <span class="muted" id="achiCount">0/0</span></h2>
+          <span class="panel-sub">Each unlocked badge grants +1% global output.</span>
+        </header>
+        <ul id="achievementList" class="achievement-list"></ul>
+      </article>
+    </section>
+
+    <footer class="bottom-bar">
+      <button id="muteBtn" class="ghost" type="button">Mute</button>
+      <button id="saveBtn" class="ghost" type="button">Save</button>
+      <button id="resetBtn" class="ghost danger" type="button">Hard reset</button>
+      <span class="muted">Auto-saves every 10s · idle progress capped at 4 h</span>
+    </footer>
+  </main>
+
+  <div class="modal" id="ascendModal" hidden>
+    <div class="modal-card">
+      <h2>Ascend the forge?</h2>
+      <p>Your sparks, generators, and upgrades will burn away.</p>
+      <p>You will earn <strong id="ascendShards">0</strong> shard(s).</p>
+      <p class="muted">Each shard grants <strong>+2%</strong> permanent global output.</p>
+      <div class="modal-actions">
+        <button id="ascendCancel" class="ghost" type="button">Cancel</button>
+        <button id="ascendConfirm" class="primary" type="button">Ascend</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div id="particleLayer" class="particle-layer" aria-hidden="true"></div>
+
+  <script src="../arcade-tokens.js"></script>
+  <script src="../arcade-scores.js"></script>
+  <script src="./game.js"></script>
+  <script src="/sw-register.js"></script>
+</body>
+</html>
