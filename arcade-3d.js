@@ -28,6 +28,13 @@ const DEFAULT_GAMES = [
     screen: "#e8c088",
   },
   {
+    slug: "gorillas",
+    title: "GORILLAS",
+    blurb: "Classic BAS clone · artillery bananas · shifting wind",
+    marquee: "#ffd54f",
+    screen: "#4fc3f7",
+  },
+  {
     slug: "nibbles",
     title: "NIBBLES",
     blurb: "QBasic snake · digits for length · maze levels",
@@ -37,9 +44,16 @@ const DEFAULT_GAMES = [
   {
     slug: "grapple",
     title: "SKYHOOK",
-    blurb: "Three.js grapple · swing to the gold platform",
+    blurb: "Cyberpunk grapple heist · hijack 12 data shards · ride the uplink",
     marquee: "#00fff2",
     screen: "#ff1493",
+  },
+  {
+    slug: "parkour",
+    title: "NEON DRIFT",
+    blurb: "3rd-person parkour · double-jump · race the clock",
+    marquee: "#ff5cd2",
+    screen: "#10c4ff",
   },
   {
     slug: "peggle",
@@ -61,6 +75,13 @@ const DEFAULT_GAMES = [
     blurb: "Idle clicker · auto-smiths · ascend for shards",
     marquee: "#ffe27a",
     screen: "#ff5cd2",
+  },
+  {
+    slug: "drone",
+    title: "VELODRONE",
+    blurb: "FPV drone race · neon gates · 3-lap time trial",
+    marquee: "#7df9ff",
+    screen: "#ff6eb4",
   },
 ];
 
