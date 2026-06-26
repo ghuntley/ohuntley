@@ -50,6 +50,7 @@ Current slugs: `maze`, `meerkat`, `meerkat-tycoon`, `gorillas`, `nibbles`, `grap
 
 ## Game conventions
 
+- **Mobile touch is required** for every game. See `.cursor/skills/mobile-touch-compatibility/SKILL.md`.
 - Folder name = slug used everywhere (`ArcadeScores.record("<slug>", …)`).
 - Every game page links back: `href="../index.html"`.
 - Games with scores load scripts in order: `arcade-tokens.js` → `arcade-scores.js` → game JS → `sw-register.js`.
@@ -86,6 +87,7 @@ Optional Python + Playwright runner for demo recordings. Not required for lobby 
 | Task | Where to look |
 |------|---------------|
 | Add a new game | `.cursor/skills/register-arcade-game/SKILL.md` |
+| Touch / mobile controls | `.cursor/skills/mobile-touch-compatibility/SKILL.md` |
 | Fix offline / cache | `service-worker.js` (precache + VERSION bump) |
 | Lobby cabinet missing | `index.html` ARCADE_GAMES + `arcade-3d.js` DEFAULT_GAMES |
 | Leaderboard / tokens | `arcade-scores.js`, `arcade-tokens.js`, game's `record()` calls |

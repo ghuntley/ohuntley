@@ -23,6 +23,7 @@ Copy and complete when adding or auditing a game:
 - [ ] Game page: back link to `../index.html`
 - [ ] Scores (if applicable): `arcade-scores.js` + `ArcadeScores.record("<slug>", score)`
 - [ ] Tokens (optional): load `../arcade-tokens.js` before `arcade-scores.js`
+- [ ] Touch: mobile playable per `.cursor/skills/mobile-touch-compatibility/SKILL.md`
 ```
 
 ## 1. Lobby entry (`index.html`)
