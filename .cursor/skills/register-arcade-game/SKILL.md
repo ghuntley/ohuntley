@@ -42,6 +42,8 @@ Add an object to `window.ARCADE_GAMES` (inside `<head>`, before `arcade-3d.js` l
 
 `arcade-3d.js` reads `window.ARCADE_GAMES` and builds cabinets. Cabinet links resolve to `{slug}/index.html`.
 
+**Room limit:** at most **5 games per lobby room**; `chunkGames()` in `arcade-3d.js` opens a new room for each additional batch. See `.cursor/skills/arcade-room-layout/SKILL.md`.
+
 ## 2. Fallback list (`arcade-3d.js`)
 
 **Keep `DEFAULT_GAMES` identical to `ARCADE_GAMES`.** It is used only when `window.ARCADE_GAMES` is missing, but drift causes missing cabinets in edge cases.

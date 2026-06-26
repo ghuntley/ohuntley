@@ -46,6 +46,8 @@ Each game folder has a **slug** (folder name). All playable cabinets must be reg
 
 Current slugs: `maze`, `meerkat`, `meerkat-tycoon`, `gorillas`, `nibbles`, `grapple`, `parkour`, `peggle`, `shooter`, `clicker`, `drone`.
 
+**Room layout:** max **5 games per 3D lobby room**; additional games spawn new rooms automatically. See `.cursor/skills/arcade-room-layout/SKILL.md`.
+
 **Adding or auditing a game:** read and follow `.cursor/skills/register-arcade-game/SKILL.md`.
 
 ## Game conventions
@@ -87,6 +89,7 @@ Optional Python + Playwright runner for demo recordings. Not required for lobby 
 | Task | Where to look |
 |------|---------------|
 | Add a new game | `.cursor/skills/register-arcade-game/SKILL.md` |
+| Lobby rooms / cabinet layout | `.cursor/skills/arcade-room-layout/SKILL.md` |
 | Touch / mobile controls | `.cursor/skills/mobile-touch-compatibility/SKILL.md` |
 | Fix offline / cache | `service-worker.js` (precache + VERSION bump) |
 | Lobby cabinet missing | `index.html` ARCADE_GAMES + `arcade-3d.js` DEFAULT_GAMES |

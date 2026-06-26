@@ -90,6 +90,19 @@ function getGames() {
   return Array.isArray(g) && g.length ? g : DEFAULT_GAMES;
 }
 
+/** Max cabinets per 3D lobby room; overflow spawns another room behind this one. */
+const GAMES_PER_ROOM = 5;
+
+function chunkGames(games, perRoom = GAMES_PER_ROOM) {
+  const list = Array.isArray(games) ? games : [];
+  if (!list.length) return [[]];
+  const chunks = [];
+  for (let i = 0; i < list.length; i += perRoom) {
+    chunks.push(list.slice(i, i + perRoom));
+  }
+  return chunks;
+}
+
 const VIBE = {
   fogNear: 12,
   fogFar: 48,
@@ -1700,7 +1713,100 @@ function addCornerUplights(scene, roomW, roomD) {
   }
 }
 
-function buildRoom(scene, roomW, roomD, games) {
+function addBackWallDoorway(container, roomW, roomD, wallH, wallMat) {
+  const d = roomD / 2;
+  const t = wallH / 2;
+  const doorW = 4.6;
+  const doorH = 2.35;
+  const segW = (roomW - doorW) / 2;
+  if (segW > 0.1) {
+    const left = new THREE.Mesh(new THREE.BoxGeometry(segW, wallH, 0.38), wallMat);
+    left.position.set(-(doorW / 2 + segW / 2), t, -d);
+    container.add(left);
+    const right = new THREE.Mesh(new THREE.BoxGeometry(segW, wallH, 0.38), wallMat);
+    right.position.set(doorW / 2 + segW / 2, t, -d);
+    container.add(right);
+  }
+  const lintelH = wallH - doorH;
+  if (lintelH > 0.15) {
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW, lintelH, 0.38), wallMat);
+    lintel.position.set(0, doorH + lintelH / 2, -d);
+    container.add(lintel);
+  }
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: 0x00fff2,
+    emissive: 0x00fff2,
+    emissiveIntensity: 0.85,
+    roughness: 0.35,
+    metalness: 0.15,
+  });
+  const frameL = new THREE.Mesh(new THREE.BoxGeometry(0.12, doorH, 0.2), frameMat);
+  frameL.position.set(-doorW / 2, doorH / 2, -d + 0.08);
+  container.add(frameL);
+  const frameR = frameL.clone();
+  frameR.position.x = doorW / 2;
+  container.add(frameR);
+  const frameTop = new THREE.Mesh(new THREE.BoxGeometry(doorW, 0.12, 0.2), frameMat);
+  frameTop.position.set(0, doorH, -d + 0.08);
+  container.add(frameTop);
+
+  const arrowTex = makeSignTexture("MORE GAMES", "Walk through · next room");
+  const arrowMat = new THREE.MeshStandardMaterial({
+    map: arrowTex,
+    emissive: 0xff1493,
+    emissiveIntensity: 0.42,
+    roughness: 0.5,
+    metalness: 0.05,
+    transparent: true,
+  });
+  const arrow = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.95), arrowMat);
+  arrow.position.set(0, doorH + 0.55, -d + 0.2);
+  container.add(arrow);
+}
+
+function makeRoomLabelTexture(title, sub) {
+  const w = 1024;
+  const h = 280;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#140818";
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "#00fff2";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(12, 12, w - 24, h - 24);
+  ctx.font = "bold 72px monospace";
+  ctx.fillStyle = "#ff1493";
+  ctx.textAlign = "center";
+  ctx.fillText(title, w / 2, 108);
+  ctx.font = "36px monospace";
+  ctx.fillStyle = "#80cbc4";
+  ctx.fillText(sub, w / 2, 178);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function addRoomEntrySign(container, roomW, roomD, wallH, roomNumber, gameCount) {
+  const d = roomD / 2;
+  const tex = makeRoomLabelTexture(`ROOM ${roomNumber}`, `${gameCount} CABINET${gameCount === 1 ? "" : "S"}`);
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    emissive: 0xff1493,
+    emissiveIntensity: 0.35,
+    roughness: 0.5,
+    metalness: 0.05,
+    transparent: true,
+  });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.92), mat);
+  sign.position.set(0, wallH * 0.68, d - 0.22);
+  sign.rotation.y = Math.PI;
+  container.add(sign);
+}
+
+function buildRoom(container, roomW, roomD, games, opts = {}) {
+  const { isFirst = true, isLast = true, roomIndex = 0, totalRooms = 1 } = opts;
   const wallH = 5.2;
   const floorMap = makeCheckerTexture();
   const floorMat = new THREE.MeshStandardMaterial({
@@ -1711,7 +1817,7 @@ function buildRoom(scene, roomW, roomD, games) {
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomD), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
-  scene.add(floor);
+  container.add(floor);
 
   const grid = new THREE.GridHelper(Math.max(roomW, roomD), 64, 0xff00aa, 0x00fff2);
   const gridMats = Array.isArray(grid.material) ? grid.material : [grid.material];
@@ -1723,7 +1829,7 @@ function buildRoom(scene, roomW, roomD, games) {
     }
   }
   grid.position.y = 0.018;
-  scene.add(grid);
+  container.add(grid);
 
   const wallMat = new THREE.MeshStandardMaterial({
     color: 0x1a0828,
@@ -1734,21 +1840,27 @@ function buildRoom(scene, roomW, roomD, games) {
   const w = roomW / 2;
   const d = roomD / 2;
 
-  const back = new THREE.Mesh(new THREE.BoxGeometry(roomW, wallH, 0.38), wallMat);
-  back.position.set(0, t, -d);
-  scene.add(back);
+  if (isLast) {
+    const back = new THREE.Mesh(new THREE.BoxGeometry(roomW, wallH, 0.38), wallMat);
+    back.position.set(0, t, -d);
+    container.add(back);
+  } else {
+    addBackWallDoorway(container, roomW, roomD, wallH, wallMat);
+  }
 
-  const front = new THREE.Mesh(new THREE.BoxGeometry(roomW, wallH, 0.38), wallMat);
-  front.position.set(0, t, d);
-  scene.add(front);
+  if (isFirst) {
+    const front = new THREE.Mesh(new THREE.BoxGeometry(roomW, wallH, 0.38), wallMat);
+    front.position.set(0, t, d);
+    container.add(front);
+  }
 
   const left = new THREE.Mesh(new THREE.BoxGeometry(0.38, wallH, roomD), wallMat);
   left.position.set(-w, t, 0);
-  scene.add(left);
+  container.add(left);
 
   const right = new THREE.Mesh(new THREE.BoxGeometry(0.38, wallH, roomD), wallMat);
   right.position.set(w, t, 0);
-  scene.add(right);
+  container.add(right);
 
   const ceilMap = makeCeilingGridTexture();
   const ceilMat = new THREE.MeshStandardMaterial({
@@ -1762,46 +1874,56 @@ function buildRoom(scene, roomW, roomD, games) {
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomD), ceilMat);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.y = wallH;
-  scene.add(ceil);
+  container.add(ceil);
 
   const cyan = 0x00ffee;
   const pink = 0xff1493;
   const gold = 0xffcc00;
 
   const tubeZLen = roomD - 3;
-  const twinRailMats = addTwinCeilingRails(scene, roomW, roomD, wallH);
-  addNeonTube(scene, 0, wallH - 0.42, 0, tubeZLen * 0.92, "z", cyan, 0.55);
+  const twinRailMats = addTwinCeilingRails(container, roomW, roomD, wallH);
+  addNeonTube(container, 0, wallH - 0.42, 0, tubeZLen * 0.92, "z", cyan, 0.55);
 
   /** Cross-beams and wall grazers */
   for (let zi = -2; zi <= 2; zi++) {
     const zz = zi * (roomD / 7);
-    addNeonTube(scene, 0, wallH - 0.08, zz, roomW - 3.5, "x", gold, 0.72);
+    addNeonTube(container, 0, wallH - 0.08, zz, roomW - 3.5, "x", gold, 0.72);
   }
-  addNeonTube(scene, -w + 0.22, 2.6, 0, roomD - 2.5, "z", cyan, 0.95);
-  addNeonTube(scene, w - 0.22, 2.35, 0, roomD - 2.5, "z", pink, 0.95);
-  addNeonTube(scene, 0, 1.25, -d + 0.22, roomW - 2, "x", pink, 0.65);
+  addNeonTube(container, -w + 0.22, 2.6, 0, roomD - 2.5, "z", cyan, 0.95);
+  addNeonTube(container, w - 0.22, 2.35, 0, roomD - 2.5, "z", pink, 0.95);
+  addNeonTube(container, 0, 1.25, -d + 0.22, roomW - 2, "x", pink, 0.65);
 
-  addWallMurals(scene, roomW, roomD, wallH);
-  addHangingSign(scene, roomW, roomD, wallH);
-  const { refreshScoreboard } = addBackWallScoreboard(scene, roomW, roomD, wallH, games);
-  addNeonSkirting(scene, roomW, roomD, wallH);
-  addCrownMolding(scene, roomW, roomD, wallH);
-  addMidWallNeonBand(scene, roomW, roomD, wallH);
-  addEntranceWelcomeMat(scene, roomW, roomD);
-  const exitSignMat = addFrontExitSign(scene, roomW, roomD, wallH);
-  const marqueeBulbMats = addFrontWallMarquee(scene, roomW, roomD, wallH);
-  addAisleStanchions(scene, roomW, roomD);
-  const sparkleGroup = addLobbySparkles(scene, roomW, roomD, wallH);
-  addSodaMachine(scene, roomW, roomD);
-  addSnackMachine(scene, roomW, roomD);
-  addHighWallPosters(scene, roomW, roomD, wallH);
-  addCornerUplights(scene, roomW, roomD);
-  const lobbyBenches = addFrontWallBenches(scene, roomW, roomD);
+  addWallMurals(container, roomW, roomD, wallH);
+  addHangingSign(container, roomW, roomD, wallH);
+  const { refreshScoreboard } = addBackWallScoreboard(container, roomW, roomD, wallH, games);
+  addNeonSkirting(container, roomW, roomD, wallH);
+  addCrownMolding(container, roomW, roomD, wallH);
+  addMidWallNeonBand(container, roomW, roomD, wallH);
+  addAisleStanchions(container, roomW, roomD);
+  const sparkleGroup = addLobbySparkles(container, roomW, roomD, wallH);
+  addHighWallPosters(container, roomW, roomD, wallH);
+  addCornerUplights(container, roomW, roomD);
+
+  let exitSignMat = null;
+  let marqueeBulbMats = [];
+  let lobbyBenches = [];
+  if (isFirst) {
+    addEntranceWelcomeMat(container, roomW, roomD);
+    exitSignMat = addFrontExitSign(container, roomW, roomD, wallH);
+    marqueeBulbMats = addFrontWallMarquee(container, roomW, roomD, wallH);
+    addSodaMachine(container, roomW, roomD);
+    addSnackMachine(container, roomW, roomD);
+    lobbyBenches = addFrontWallBenches(container, roomW, roomD);
+  } else {
+    addRoomEntrySign(container, roomW, roomD, wallH, roomIndex + 1, games.length);
+  }
 
   return {
     roomW,
     roomD,
     wallH,
+    roomIndex,
+    totalRooms,
     floorGrid: grid,
     lobbyBenches,
     lobbyAnim: {
@@ -1814,11 +1936,13 @@ function buildRoom(scene, roomW, roomD, games) {
   };
 }
 
-function clampPlayer(pos, roomW, roomD, margin = 0.45) {
+function clampPlayer(pos, roomW, roomD, margin = 0.45, roomCount = 1) {
   const hx = roomW / 2 - margin;
-  const hz = roomD / 2 - margin;
+  const d = roomD / 2;
+  const minZ = roomCount <= 1 ? -d + margin : -(roomCount - 1) * roomD - d + margin;
+  const maxZ = d - margin;
   pos.x = Math.max(-hx, Math.min(hx, pos.x));
-  pos.z = Math.max(-hz, Math.min(hz, pos.z));
+  pos.z = Math.max(minZ, Math.min(maxZ, pos.z));
 }
 
 function resolveObstacleCollisions(pos, roots, playerR = 0.35) {
@@ -1875,9 +1999,22 @@ function startArcade() {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(VIBE.bgColor);
-  scene.fog = new THREE.Fog(VIBE.fogColor, VIBE.fogNear, VIBE.fogFar);
+  const gameChunks = chunkGames(games);
+  const roomCount = gameChunks.length;
+  const roomW = VIBE.roomW;
+  const roomD = VIBE.roomD;
+  scene.fog = new THREE.Fog(
+    VIBE.fogColor,
+    VIBE.fogNear,
+    VIBE.fogFar + Math.max(0, roomCount - 1) * roomD * 0.55,
+  );
 
-  const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.08, 120);
+  const camera = new THREE.PerspectiveCamera(
+    72,
+    window.innerWidth / window.innerHeight,
+    0.08,
+    80 + roomCount * roomD,
+  );
   camera.rotation.order = "YXZ";
   const EYE_HEIGHT = 1.6;
 
@@ -1905,9 +2042,52 @@ function startArcade() {
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
 
-  const roomW = VIBE.roomW;
-  const roomD = VIBE.roomD;
-  const { floorGrid, lobbyAnim, lobbyBenches } = buildRoom(scene, roomW, roomD, games);
+  const refreshScoreboards = [];
+  const cabinets = [];
+  const lobbyBenchesAll = [];
+  let lobbyAnim = null;
+  let floorGrid = null;
+
+  for (let ri = 0; ri < roomCount; ri++) {
+    const roomRoot = new THREE.Group();
+    roomRoot.position.z = -ri * roomD;
+    scene.add(roomRoot);
+
+    const roomGames = gameChunks[ri];
+    const roomBuilt = buildRoom(roomRoot, roomW, roomD, roomGames, {
+      isFirst: ri === 0,
+      isLast: ri === roomCount - 1,
+      roomIndex: ri,
+      totalRooms: roomCount,
+    });
+    if (ri === 0) {
+      lobbyAnim = roomBuilt.lobbyAnim;
+      floorGrid = roomBuilt.floorGrid;
+    }
+    if (roomBuilt.lobbyAnim?.refreshScoreboard) {
+      refreshScoreboards.push(roomBuilt.lobbyAnim.refreshScoreboard);
+    }
+    if (roomBuilt.lobbyBenches?.length) {
+      lobbyBenchesAll.push(...roomBuilt.lobbyBenches);
+    }
+
+    const layouts = layoutCabinetSlots(roomGames.length, roomW, roomD);
+    roomGames.forEach((g, i) => {
+      const isHero = roomGames.length === 1 || i === roomGames.length - 1;
+      const cab = createCabinet(g, layouts[i], isHero);
+      roomRoot.add(cab);
+      cabinets.push(cab);
+
+      const c = hexToColor(g.marquee);
+      const col = new THREE.Color(c);
+      const pl = new THREE.PointLight(col, 1.18, 7.2, 2);
+      const lo = new THREE.Vector3(0, 2.35, 0.52);
+      lo.applyAxisAngle(new THREE.Vector3(0, 1, 0), cab.rotation.y);
+      pl.position.copy(cab.position).add(lo);
+      roomRoot.add(pl);
+    });
+  }
+
   const prizeSetup = buildPrizeCounterStation(scene, roomW, roomD);
   const { station: prizeStation, prizeInteractMesh, npcParts: prizeNpcParts } = prizeSetup;
 
@@ -2089,6 +2269,10 @@ function startArcade() {
     syncTokenHud();
     applyTokenVisualTuning();
   });
+  function refreshAllScoreboards() {
+    for (const fn of refreshScoreboards) fn?.();
+  }
+
   window.addEventListener("storage", (e) => {
     if (
       e.key === "arcade-tokens-balance-v1" ||
@@ -2103,17 +2287,17 @@ function startArcade() {
       k === "mazeRunnerHighScores" ||
       k === "meerkat-chase-highscore-v1"
     ) {
-      lobbyAnim?.refreshScoreboard?.();
+      refreshAllScoreboards();
     }
   });
 
   window.addEventListener("focus", () => {
-    lobbyAnim?.refreshScoreboard?.();
+    refreshAllScoreboards();
   });
 
   document.addEventListener("visibilitychange", () => {
     resetWalkInput();
-    if (!document.hidden) lobbyAnim?.refreshScoreboard?.();
+    if (!document.hidden) refreshAllScoreboards();
   });
 
   const tokenShop = document.getElementById("token-shop");
@@ -2129,24 +2313,7 @@ function startArcade() {
   document.getElementById("token-shop-close")?.addEventListener("click", () => closeTokenShop());
   document.querySelector(".token-shop-inner")?.addEventListener("click", (e) => e.stopPropagation());
 
-  const layouts = layoutCabinetSlots(games.length, roomW, roomD);
-  const cabinets = [];
-  games.forEach((g, i) => {
-    const isHero = games.length === 1 || i === games.length - 1;
-    const cab = createCabinet(g, layouts[i], isHero);
-    scene.add(cab);
-    cabinets.push(cab);
-
-    const c = hexToColor(g.marquee);
-    const col = new THREE.Color(c);
-    const pl = new THREE.PointLight(col, 1.18, 7.2, 2);
-    const lo = new THREE.Vector3(0, 2.35, 0.52);
-    lo.applyAxisAngle(new THREE.Vector3(0, 1, 0), cab.rotation.y);
-    pl.position.copy(cab.position).add(lo);
-    scene.add(pl);
-  });
-
-  const colliders = [prizeStation, ...cabinets, ...(lobbyBenches ?? [])];
+  const colliders = [prizeStation, ...cabinets, ...lobbyBenchesAll];
 
   controls = new PointerLockControls(camera, document.body);
   camera.position.set(0, EYE_HEIGHT, roomD / 2 - 2.4);
@@ -2508,7 +2675,7 @@ function startArcade() {
         camera.position.y = EYE_HEIGHT;
         verticalVelocity = 0;
       }
-      clampPlayer(camera.position, roomW, roomD);
+      clampPlayer(camera.position, roomW, roomD, 0.45, roomCount);
       resolveObstacleCollisions(camera.position, colliders);
 
       if (findPrizeCounterInteract(camera, prizeInteractMesh, raycaster)) {
