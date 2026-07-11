@@ -1199,7 +1199,6 @@ function main() {
 
     const GP = window.ArcadeGamepad;
     if (GP) {
-      GP.update();
       if (GP.connected) {
         if (!controls.isLocked && GP.confirmPressed()) controls.lock();
         if (controls.isLocked && !won) {

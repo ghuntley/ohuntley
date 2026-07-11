@@ -326,7 +326,6 @@
   function applyGamepadInput() {
     const GP = window.ArcadeGamepad;
     if (!GP) return;
-    GP.update();
     if (GP.confirmPressed()) {
       if (gameOver) level = 1;
       if (!playing || gameOver) startGame();

@@ -1160,7 +1160,6 @@
   (function tycoonGamepadLoop() {
     const GP = window.ArcadeGamepad;
     if (GP) {
-      GP.update();
       if (GP.pressed("start") || GP.pressed("y")) el("btnPause").click();
       if (GP.pressed("x") || GP.pressed("b")) el("btnReset").click();
       if (GP.pressed("lb") || GP.pressed("dup")) {

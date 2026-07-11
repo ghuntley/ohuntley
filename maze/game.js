@@ -716,7 +716,6 @@ function handleMoveKey(code) {
 function pollMazeGamepad() {
     const GP = window.ArcadeGamepad;
     if (!GP) return;
-    GP.update();
     if (GP.pressed("b") || GP.pressed("x")) restartGame();
     if (GP.pressed("start") || GP.pressed("y")) {
         if (gameStarted && !gameWon) togglePause();

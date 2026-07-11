@@ -1360,7 +1360,6 @@ class MeerkatChaseGame {
   #step() {
     const GP = window.ArcadeGamepad;
     if (GP) {
-      GP.update();
       if (this.state === GameState.menu && GP.confirmPressed()) {
         this.#beginPlayFromMenu();
       } else if (this.state === GameState.levelDone && GP.confirmPressed()) {

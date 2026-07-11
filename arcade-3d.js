@@ -2655,9 +2655,7 @@ function startArcade() {
     const playing = arcadePlaying();
     if (playing) {
       const GP = window.ArcadeGamepad;
-      if (GP) {
-        GP.update();
-        if (GP.connected) {
+      if (GP?.connected) {
           if (!controls.isLocked && !touchPlayMode && GP.confirmPressed()) {
             enterArcadePlayMode();
           }
@@ -2680,7 +2678,6 @@ function startArcade() {
             if (GP.pressed("start") && !tokenShopOpen) openTokenShop();
             if (GP.pressed("back") && touchPlayMode) exitTouchPlayMode();
           }
-        }
       }
 
       const canWalk =

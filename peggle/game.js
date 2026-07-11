@@ -270,7 +270,6 @@
     last = now;
     const GP = window.ArcadeGamepad;
     if (GP) {
-      GP.update();
       if (GP.connected && phase !== "flying") {
         mouseX = LAUNCH.x + GP.leftX * 220;
         mouseY = LAUNCH.y + 80 + GP.leftY * 180;

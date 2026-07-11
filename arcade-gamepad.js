@@ -2,10 +2,8 @@
  * Shared Xbox / standard gamepad input for Funland Arcade games.
  *
  * Pair the controller via Bluetooth or USB in the OS; the browser exposes it
- * through the Gamepad API (no extra pairing code in the page).
- *
- * Load before game scripts. Call ArcadeGamepad.start() once; poll each frame
- * (automatic while started) and read held()/pressed() or use helpers.
+ * through the Gamepad API. One internal poll loop feeds all games — games read
+ * held()/pressed() without calling update() each frame.
  */
 (function (w) {
   "use strict";
@@ -13,11 +11,21 @@
   const DEADZONE = 0.18;
   const STICK_AS_DPAD = 0.52;
   const TRIGGER_THRESHOLD = 0.35;
+  const IDLE_POLL_MS = 420;
+  const BTN_NAMES = [
+    "a", "b", "x", "y", "lb", "rb", "lt", "rt",
+    "back", "start", "ls", "rs", "dup", "ddown", "dleft", "dright",
+  ];
 
-  /** @type {number} */
   let running = false;
+  let pollRaf = 0;
+  let lastPollMs = 0;
+  let scanActive = false;
+  let scanTicks = 0;
   /** @type {Map<string, boolean>} */
   const prevHeld = new Map();
+  /** @type {number[]} */
+  const buttons = new Array(16).fill(0);
 
   const BTN = {
     a: 0,
@@ -38,6 +46,7 @@
     dright: 15,
   };
 
+  let cachedPadIndex = -1;
   /** @type {Gamepad | null} */
   let pad = null;
 
@@ -51,6 +60,8 @@
     rightY: 0,
     lt: 0,
     rt: 0,
+    dpadX: 0,
+    dpadY: 0,
   };
 
   function applyDeadzone(v) {
@@ -66,17 +77,26 @@
   }
 
   function findPad() {
-    const list = w.navigator.getGamepads?.() || [];
+    const list = w.navigator.getGamepads?.();
+    if (!list) return null;
+    if (cachedPadIndex >= 0) {
+      const cached = list[cachedPadIndex];
+      if (cached?.connected) return cached;
+      cachedPadIndex = -1;
+    }
     for (let i = 0; i < list.length; i++) {
       const g = list[i];
-      if (g?.connected) return g;
+      if (g?.connected) {
+        cachedPadIndex = i;
+        return g;
+      }
     }
     return null;
   }
 
   function readTriggers(gp) {
-    let lt = btnValue(gp, BTN.lt);
-    let rt = btnValue(gp, BTN.rt);
+    let lt = buttons[BTN.lt];
+    let rt = buttons[BTN.rt];
     if (lt < TRIGGER_THRESHOLD && gp.axes.length > 4) {
       const ax = (gp.axes[4] + 1) * 0.5;
       if (ax > lt) lt = ax;
@@ -89,15 +109,34 @@
     state.rt = rt >= TRIGGER_THRESHOLD ? rt : 0;
   }
 
-  function poll() {
+  function computeDpad() {
+    let x = 0;
+    let y = 0;
+    if (buttons[BTN.dleft] >= TRIGGER_THRESHOLD) x = -1;
+    else if (buttons[BTN.dright] >= TRIGGER_THRESHOLD) x = 1;
+    else if (state.leftX <= -STICK_AS_DPAD) x = -1;
+    else if (state.leftX >= STICK_AS_DPAD) x = 1;
+
+    if (buttons[BTN.dup] >= TRIGGER_THRESHOLD) y = -1;
+    else if (buttons[BTN.ddown] >= TRIGGER_THRESHOLD) y = 1;
+    else if (state.leftY <= -STICK_AS_DPAD) y = -1;
+    else if (state.leftY >= STICK_AS_DPAD) y = 1;
+
+    state.dpadX = x;
+    state.dpadY = y;
+  }
+
+  function pollOnce() {
     pad = findPad();
     if (!pad) {
+      if (state.connected) prevHeld.clear();
       state.connected = false;
       state.id = "";
       state.index = -1;
       state.leftX = state.leftY = state.rightX = state.rightY = 0;
       state.lt = state.rt = 0;
-      prevHeld.clear();
+      state.dpadX = state.dpadY = 0;
+      buttons.fill(0);
       return;
     }
 
@@ -108,7 +147,10 @@
     state.leftY = applyDeadzone(pad.axes[1] || 0);
     state.rightX = applyDeadzone(pad.axes[2] || 0);
     state.rightY = applyDeadzone(pad.axes[3] || 0);
+
+    for (let i = 0; i < 16; i++) buttons[i] = btnValue(pad, i);
     readTriggers(pad);
+    computeDpad();
   }
 
   function isHeld(name) {
@@ -118,7 +160,7 @@
     if (key === "rt") return state.rt > 0;
     const idx = BTN[key];
     if (idx == null) return false;
-    return btnValue(pad, idx) >= TRIGGER_THRESHOLD;
+    return buttons[idx] >= TRIGGER_THRESHOLD;
   }
 
   function wasHeld(name) {
@@ -126,8 +168,8 @@
   }
 
   function commitEdges() {
-    const names = ["a", "b", "x", "y", "lb", "rb", "lt", "rt", "back", "start", "ls", "rs", "dup", "ddown", "dleft", "dright"];
-    for (const n of names) {
+    for (let i = 0; i < BTN_NAMES.length; i++) {
+      const n = BTN_NAMES[i];
       prevHeld.set(n, isHeld(n));
     }
   }
@@ -145,25 +187,16 @@
   }
 
   function dpadX() {
-    if (isHeld("dleft")) return -1;
-    if (isHeld("dright")) return 1;
-    if (state.leftX <= -STICK_AS_DPAD) return -1;
-    if (state.leftX >= STICK_AS_DPAD) return 1;
-    return 0;
+    return state.dpadX;
   }
 
   function dpadY() {
-    if (isHeld("dup")) return -1;
-    if (isHeld("ddown")) return 1;
-    if (state.leftY <= -STICK_AS_DPAD) return -1;
-    if (state.leftY >= STICK_AS_DPAD) return 1;
-    return 0;
+    return state.dpadY;
   }
 
-  /** @returns {"ArrowUp"|"ArrowDown"|"ArrowLeft"|"ArrowRight"|null} */
   function directionCode() {
-    const x = dpadX();
-    const y = dpadY();
+    const x = state.dpadX;
+    const y = state.dpadY;
     if (Math.abs(x) > Math.abs(y)) {
       if (x < 0) return "ArrowLeft";
       if (x > 0) return "ArrowRight";
@@ -176,7 +209,6 @@
 
   let lastDir = null;
 
-  /** Edge-triggered direction for snake / maze style games. */
   function consumeDirection() {
     const dir = directionCode();
     if (!dir || dir === lastDir) return null;
@@ -188,11 +220,10 @@
     lastDir = null;
   }
 
-  /** Merge left stick + d-pad into a Set of movement key codes. */
   function applyMoveKeys(keys) {
     if (!state.connected || !keys) return;
-    const y = dpadY();
-    const x = dpadX();
+    const y = state.dpadY;
+    const x = state.dpadX;
     if (y < 0) {
       keys.add("KeyW");
       keys.add("ArrowUp");
@@ -211,11 +242,10 @@
     }
   }
 
-  /** Merge into `{ [code: string]: boolean }` style key maps. */
   function applyMoveKeyMap(keys) {
     if (!state.connected || !keys) return;
-    const y = dpadY();
-    const x = dpadX();
+    const y = state.dpadY;
+    const x = state.dpadX;
     if (y < 0) {
       keys.KeyW = true;
       keys.ArrowUp = true;
@@ -242,41 +272,99 @@
     return held("a") || held("start");
   }
 
+  function needsFastPoll() {
+    return state.connected || panelOpen || scanActive;
+  }
+
+  function pollLoop(now) {
+    pollRaf = w.requestAnimationFrame(pollLoop);
+    if (!running) return;
+    if (w.document.visibilityState === "hidden") return;
+
+    const fast = needsFastPoll();
+    if (!fast && now - lastPollMs < IDLE_POLL_MS) return;
+
+    const wasConnected = state.connected;
+    lastPollMs = now;
+    pollOnce();
+    commitEdges();
+
+    if (wasConnected !== state.connected) {
+      if (state.connected) {
+        w.dispatchEvent(
+          new CustomEvent("arcade-gamepad-connected", { detail: { id: state.id } }),
+        );
+      } else {
+        w.dispatchEvent(new CustomEvent("arcade-gamepad-disconnected"));
+      }
+    }
+
+    refreshConnectionUI();
+
+    if (scanActive) {
+      scanTicks += 1;
+      if (state.connected) {
+        if (hintEl) {
+          hintEl.textContent = "Controller detected. You can close this panel and play.";
+        }
+        scanActive = false;
+        scanTicks = 0;
+      } else if (scanTicks > 90) {
+        if (hintEl) {
+          hintEl.textContent =
+            "No controller detected yet. Confirm Bluetooth pairing, then scan again.";
+        }
+        scanActive = false;
+        scanTicks = 0;
+      }
+    }
+  }
+
+  function ensurePollLoop() {
+    if (!pollRaf && running) pollLoop(0);
+  }
+
   function start() {
     if (running) return;
     running = true;
     w.addEventListener("gamepadconnected", onConnect);
     w.addEventListener("gamepaddisconnected", onDisconnect);
-    poll();
+    pollOnce();
     commitEdges();
+    ensurePollLoop();
   }
 
   function stop() {
     running = false;
+    if (pollRaf) {
+      w.cancelAnimationFrame(pollRaf);
+      pollRaf = 0;
+    }
     w.removeEventListener("gamepadconnected", onConnect);
     w.removeEventListener("gamepaddisconnected", onDisconnect);
+    cachedPadIndex = -1;
     pad = null;
     state.connected = false;
     prevHeld.clear();
   }
 
   function onConnect(e) {
-    poll();
-    refreshConnectionUI();
-    w.dispatchEvent(new CustomEvent("arcade-gamepad-connected", { detail: { id: state.id } }));
+    if (e?.gamepad && Number.isInteger(e.gamepad.index)) {
+      cachedPadIndex = e.gamepad.index;
+    }
+    lastPollMs = 0;
   }
 
-  function onDisconnect() {
-    pad = null;
-    state.connected = false;
-    prevHeld.clear();
-    refreshConnectionUI();
-    w.dispatchEvent(new CustomEvent("arcade-gamepad-disconnected"));
+  function onDisconnect(e) {
+    if (e?.gamepad && e.gamepad.index === cachedPadIndex) cachedPadIndex = -1;
+    lastPollMs = 0;
   }
 
-  /** Call once per frame before held()/pressed(). */
-  function update() {
-    poll();
+  /** Kept for API compatibility — polling is automatic via the internal loop. */
+  function update() {}
+
+  function poll() {
+    pollOnce();
     commitEdges();
   }
 
@@ -284,7 +372,8 @@
 
   let uiMounted = false;
   let panelOpen = false;
-  let scanTimer = 0;
+  let uiConnected = null;
+  let uiId = "";
   /** @type {HTMLElement | null} */
   let statusEl = null;
   /** @type {HTMLElement | null} */
@@ -293,6 +382,10 @@
   let panelEl = null;
   /** @type {HTMLButtonElement | null} */
   let toggleBtn = null;
+  /** @type {HTMLElement | null} */
+  let statusDot = null;
+  /** @type {HTMLElement | null} */
+  let statusText = null;
 
   function pairingStepsHtml() {
     const ua = navigator.userAgent || "";
@@ -335,19 +428,26 @@
   }
 
   function refreshConnectionUI() {
-    poll();
     const connected = state.connected;
+    const id = state.id;
+    if (uiConnected === connected && uiId === id) return;
+    uiConnected = connected;
+    uiId = id;
+
     if (toggleBtn) {
       toggleBtn.classList.toggle("is-connected", connected);
       toggleBtn.setAttribute("aria-pressed", connected ? "true" : "false");
       toggleBtn.title = connected
-        ? `Controller connected: ${shortPadName(state.id)}`
+        ? `Controller connected: ${shortPadName(id)}`
         : "Connect Bluetooth controller";
     }
-    if (statusEl) {
-      statusEl.innerHTML = connected
-        ? `<span class="arcade-gp-status-dot on"></span> Connected · <strong>${shortPadName(state.id)}</strong>`
-        : `<span class="arcade-gp-status-dot"></span> Not connected · pair in Bluetooth settings, then scan`;
+    if (statusDot) {
+      statusDot.classList.toggle("on", connected);
+    }
+    if (statusText) {
+      statusText.textContent = connected
+        ? `Connected · ${shortPadName(id)}`
+        : "Not connected · pair in Bluetooth settings, then scan";
     }
   }
 
@@ -363,10 +463,8 @@
     if (!panelEl) return;
     panelOpen = false;
     panelEl.hidden = true;
-    if (scanTimer) {
-      clearInterval(scanTimer);
-      scanTimer = 0;
-    }
+    scanActive = false;
+    scanTicks = 0;
     toggleBtn?.focus({ preventScroll: true });
   }
 
@@ -374,30 +472,15 @@
     if (hintEl) {
       hintEl.textContent = "Listening… press any button on your controller.";
     }
-    let ticks = 0;
-    if (scanTimer) clearInterval(scanTimer);
-    scanTimer = setInterval(() => {
-      update();
-      refreshConnectionUI();
-      ticks += 1;
-      if (state.connected) {
-        if (hintEl) hintEl.textContent = "Controller detected. You can close this panel and play.";
-        clearInterval(scanTimer);
-        scanTimer = 0;
-      } else if (ticks > 90) {
-        if (hintEl) {
-          hintEl.textContent =
-            "No controller detected yet. Confirm Bluetooth pairing, then scan again.";
-        }
-        clearInterval(scanTimer);
-        scanTimer = 0;
-      }
-    }, 100);
+    scanActive = true;
+    scanTicks = 0;
+    lastPollMs = 0;
   }
 
   function mountConnectionUI() {
     if (uiMounted || document.getElementById("arcade-gamepad-btn")) return;
     uiMounted = true;
+    document.body.classList.add("arcade-gp-active");
 
     const style = document.createElement("style");
     style.id = "arcade-gamepad-ui-style";
@@ -420,6 +503,7 @@
   cursor: pointer;
   box-shadow: 0 0 14px rgba(255, 20, 147, 0.18);
   -webkit-tap-highlight-color: transparent;
+  contain: layout style paint;
 }
 #arcade-gamepad-btn:hover { border-color: #00fff2; color: #fff; }
 #arcade-gamepad-btn.is-connected {
@@ -427,9 +511,9 @@
   box-shadow: 0 0 16px rgba(0, 255, 136, 0.25);
 }
 #arcade-gamepad-btn svg { width: 1.05rem; height: 1.05rem; flex-shrink: 0; }
-body:has(#arcade-gamepad-btn) a.back-link,
-body:has(#arcade-gamepad-btn) a.back,
-body:has(#arcade-gamepad-btn) a.home {
+body.arcade-gp-active a.back-link,
+body.arcade-gp-active a.back,
+body.arcade-gp-active a.home {
   left: calc(max(0.65rem, env(safe-area-inset-left)) + 2.85rem) !important;
 }
 #arcade-gamepad-panel {
@@ -441,7 +525,6 @@ body:has(#arcade-gamepad-btn) a.home {
   padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
     max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   background: rgba(4, 3, 10, 0.72);
-  backdrop-filter: blur(4px);
 }
 #arcade-gamepad-panel[hidden] { display: none !important; }
 .arcade-gp-card {
@@ -485,15 +568,16 @@ body:has(#arcade-gamepad-btn) a.home {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
   font-size: 0.86rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 .arcade-gp-status-dot {
-  display: inline-block;
   width: 0.55rem;
   height: 0.55rem;
-  margin-right: 0.35rem;
   border-radius: 50%;
   background: #666;
-  vertical-align: middle;
+  flex-shrink: 0;
 }
 .arcade-gp-status-dot.on {
   background: #00e676;
@@ -548,7 +632,7 @@ body:has(#arcade-gamepad-btn) a.home {
       "<header><h2 id=\"arcade-gp-title\">Bluetooth controller</h2>" +
       '<button type="button" class="arcade-gp-close" aria-label="Close">×</button></header>' +
       '<div class="arcade-gp-body">' +
-      '<p class="arcade-gp-status"></p>' +
+      '<p class="arcade-gp-status"><span class="arcade-gp-status-dot"></span><span class="arcade-gp-status-text"></span></p>' +
       '<p class="arcade-gp-hint">Pair in ' +
       guide.os +
       " Bluetooth first. The browser cannot pair devices itself.</p>" +
@@ -561,6 +645,8 @@ body:has(#arcade-gamepad-btn) a.home {
       "</div></div></div>";
 
     statusEl = panelEl.querySelector(".arcade-gp-status");
+    statusDot = panelEl.querySelector(".arcade-gp-status-dot");
+    statusText = panelEl.querySelector(".arcade-gp-status-text");
     hintEl = panelEl.querySelector(".arcade-gp-hint");
 
     toggleBtn.addEventListener("click", (e) => {
@@ -587,9 +673,6 @@ body:has(#arcade-gamepad-btn) a.home {
     document.body.appendChild(toggleBtn);
     document.body.appendChild(panelEl);
     refreshConnectionUI();
-
-    w.addEventListener("arcade-gamepad-connected", refreshConnectionUI);
-    w.addEventListener("arcade-gamepad-disconnected", refreshConnectionUI);
   }
 
   w.ArcadeGamepad = {

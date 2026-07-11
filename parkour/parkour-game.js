@@ -1033,7 +1033,6 @@ function animate() {
 
   const GP = window.ArcadeGamepad;
   if (GP) {
-    GP.update();
     if (GP.connected) {
       if (!pointerLocked && GP.confirmPressed()) canvas.requestPointerLock?.();
       if (!runActive && GP.confirmPressed()) startRun();

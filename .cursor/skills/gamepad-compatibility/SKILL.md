@@ -16,7 +16,7 @@ Shared module: **`arcade-gamepad.js`** → global **`ArcadeGamepad`**.
 
 ```
 - [ ] `<script src="../arcade-gamepad.js"></script>` before game JS (after tokens/scores if present)
-- [ ] Call `ArcadeGamepad.update()` once per frame before reading input
+- [ ] Read `held()` / `pressed()` in the game loop — polling is automatic (no per-frame `update()` needed)
 - [ ] Map sticks/buttons into the same input path as keyboard (not a separate control scheme)
 - [ ] Precache `/arcade-gamepad.js` in service-worker.js (+ bump VERSION)
 ```
@@ -34,14 +34,16 @@ Lobby (`index.html`): `./arcade-gamepad.js` before `arcade-3d.js`.
 
 ## API (`ArcadeGamepad`)
 
-Call **`ArcadeGamepad.start()`** once (auto-runs on `DOMContentLoaded`). A **Pad** button is injected in the **top-left** (`#arcade-gamepad-btn`) on every page that loads this script — it opens Bluetooth pairing steps and a scan flow.
+Call **`ArcadeGamepad.start()`** once (auto-runs on `DOMContentLoaded`). A **Pad** button is injected in the **top-left** (`#arcade-gamepad-btn`) on every page that loads this script — it opens Bluetooth pairing steps and a scan flow. An internal `requestAnimationFrame` loop polls the pad — games do **not** need to call `update()` each frame.
 
 Each frame in game code:
 
 ```javascript
-ArcadeGamepad.update();
 if (!ArcadeGamepad.connected) return;
+// read held(), pressed(), sticks, etc.
 ```
+
+`update()` remains as a no-op for backward compatibility.
 
 | Method / property | Use |
 |-------------------|-----|
@@ -80,7 +82,7 @@ Button names: `a`, `b`, `x`, `y`, `lb`, `rb`, `lt`, `rt`, `start`, `back`, `dup`
 
 ### FPS / 3D (shooter, grapple, parkour, drone, lobby)
 
-In the main loop, after `update()`:
+In the main loop:
 
 ```javascript
 if (ArcadeGamepad.connected) {
@@ -95,7 +97,6 @@ Reference: `shooter/game.js`, `grapple/grapple-game.js`, `parkour/parkour-game.j
 ### Discrete direction (nibbles, maze)
 
 ```javascript
-ArcadeGamepad.update();
 const dir = ArcadeGamepad.consumeDirection();
 if (dir) handleMove(dir); // ArrowUp, ArrowDown, …
 ```
@@ -122,8 +123,7 @@ Adjust values with sticks/d-pad in the render loop; `pressed("a")` to submit.
 
 ## Common mistakes
 
-- Forgetting `update()` before `held()` / `pressed()` (edges never fire).
-- Gamepad-only code path that skips keyboard — merge into the same `keys` / handlers.
+- Skipping keyboard merge — gamepad-only code path that skips keyboard; merge into the same `keys` / handlers.
 - Missing `arcade-gamepad.js` in service worker (offline lobby/games break).
 - Using Web Bluetooth API — not needed; use `navigator.getGamepads()`.
 

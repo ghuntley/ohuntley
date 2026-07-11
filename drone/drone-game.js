@@ -846,7 +846,6 @@ const TOUCH_MODE = matchMedia("(pointer: coarse)").matches;
 function readInputs(dt) {
   const GP = window.ArcadeGamepad;
   if (GP) {
-    GP.update();
     if (GP.connected) {
       inputs.throttle = THREE.MathUtils.clamp(0.5 - GP.leftY * 0.5, 0, 1);
       if (GP.rt > 0.2) inputs.throttle = Math.max(inputs.throttle, GP.rt);

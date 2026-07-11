@@ -464,7 +464,6 @@ function tick() {
 
   const GP = window.ArcadeGamepad;
   if (GP) {
-    GP.update();
     if (!projectiles.length && !roundLocked) {
       let angle = Number(angleInput.value);
       let power = Number(powerInput.value);
