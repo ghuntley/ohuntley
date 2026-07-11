@@ -462,6 +462,23 @@ function tick() {
   drawProjectile();
   drawBurst();
 
+  const GP = window.ArcadeGamepad;
+  if (GP) {
+    GP.update();
+    if (!projectiles.length && !roundLocked) {
+      let angle = Number(angleInput.value);
+      let power = Number(powerInput.value);
+      if (GP.held("dleft") || GP.leftX < -0.35) angle = clamp(angle - 1.2, 0, 90);
+      if (GP.held("dright") || GP.leftX > 0.35) angle = clamp(angle + 1.2, 0, 90);
+      if (GP.held("dup") || GP.leftY < -0.35) power = clamp(power + 2.5, 5, 130);
+      if (GP.held("ddown") || GP.leftY > 0.35) power = clamp(power - 2.5, 5, 130);
+      angleInput.value = String(Math.round(angle));
+      powerInput.value = String(Math.round(power));
+      if (GP.pressed("a")) shotForm.requestSubmit();
+      if (GP.pressed("x") || GP.pressed("b")) newRoundBtn.click();
+    }
+  }
+
   requestAnimationFrame(tick);
 }
 

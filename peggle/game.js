@@ -268,6 +268,21 @@
   function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
+    const GP = window.ArcadeGamepad;
+    if (GP) {
+      GP.update();
+      if (GP.connected && phase !== "flying") {
+        mouseX = LAUNCH.x + GP.leftX * 220;
+        mouseY = LAUNCH.y + 80 + GP.leftY * 180;
+      }
+      if (GP.pressed("a")) {
+        if (phase === "idle") fire();
+        else if (phase === "done") resetRun();
+      }
+      if (GP.pressed("x") || GP.pressed("b")) {
+        if (phase === "idle" || phase === "done") resetRun();
+      }
+    }
     if (phase === "flying") update(dt);
     draw();
     requestAnimationFrame(loop);

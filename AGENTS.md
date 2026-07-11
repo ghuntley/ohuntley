@@ -25,6 +25,7 @@ Do not open game HTML files directly via `file://`; module imports and the servi
 index.html          # 3D lobby; defines window.ARCADE_GAMES
 arcade-3d.js        # Three.js lobby (cabinets, walking, prize counter)
 arcade-scores.js    # Shared localStorage leaderboards (per slug)
+arcade-gamepad.js   # Shared Xbox / standard gamepad input (Gamepad API)
 arcade-tokens.js    # Token economy; auto-awards on ArcadeScores.record()
 service-worker.js   # Offline precache; bump VERSION when PRECACHE_URLS changes
 sw-register.js      # Service worker registration
@@ -53,9 +54,10 @@ Current slugs: `maze`, `meerkat`, `meerkat-tycoon`, `gorillas`, `nibbles`, `grap
 ## Game conventions
 
 - **Mobile touch is required** for every game. See `.cursor/skills/mobile-touch-compatibility/SKILL.md`.
+- **Gamepad support is required** (Xbox / Bluetooth via Gamepad API). See `.cursor/skills/gamepad-compatibility/SKILL.md`.
 - Folder name = slug used everywhere (`ArcadeScores.record("<slug>", …)`).
 - Every game page links back: `href="../index.html"`.
-- Games with scores load scripts in order: `arcade-tokens.js` → `arcade-scores.js` → game JS → `sw-register.js`.
+- Games with scores load scripts in order: `arcade-tokens.js` → `arcade-scores.js` → `arcade-gamepad.js` → game JS → `sw-register.js`.
 - Time trials use `{ lowerIsBetter: true }` on `ArcadeScores.record()`.
 - Match the style of neighboring games (canvas vs module script, CSS split or inline).
 - Self-host dependencies under `vendor/` — do not add CDN links (locked-down school networks block them).
@@ -91,6 +93,7 @@ Optional Python + Playwright runner for demo recordings. Not required for lobby 
 | Add a new game | `.cursor/skills/register-arcade-game/SKILL.md` |
 | Lobby rooms / cabinet layout | `.cursor/skills/arcade-room-layout/SKILL.md` |
 | Touch / mobile controls | `.cursor/skills/mobile-touch-compatibility/SKILL.md` |
+| Gamepad / Xbox controller | `.cursor/skills/gamepad-compatibility/SKILL.md` |
 | Fix offline / cache | `service-worker.js` (precache + VERSION bump) |
 | Lobby cabinet missing | `index.html` ARCADE_GAMES + `arcade-3d.js` DEFAULT_GAMES |
 | Leaderboard / tokens | `arcade-scores.js`, `arcade-tokens.js`, game's `record()` calls |

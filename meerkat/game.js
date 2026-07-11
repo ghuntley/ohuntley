@@ -1358,6 +1358,28 @@ class MeerkatChaseGame {
   }
 
   #step() {
+    const GP = window.ArcadeGamepad;
+    if (GP) {
+      GP.update();
+      if (this.state === GameState.menu && GP.confirmPressed()) {
+        this.#beginPlayFromMenu();
+      } else if (this.state === GameState.levelDone && GP.confirmPressed()) {
+        this.#advanceToNextLevel();
+      } else if (
+        (this.state === GameState.win || this.state === GameState.lose) &&
+        GP.confirmPressed()
+      ) {
+        this.reset();
+      } else if (this.state === GameState.play) {
+        if (GP.pressed("start") || GP.pressed("y")) {
+          this.paused = !this.paused;
+        }
+        if (GP.confirmHeld() || GP.held("dup") || GP.dpadY() < 0) {
+          this._jumpBuffer = CONFIG.jumpBufferFrames;
+        }
+        if (GP.pressed("b") || GP.pressed("x")) this.reset();
+      }
+    }
     this.tick++;
     if (this.state === GameState.play && !this.paused) {
       this.#updatePlayer();

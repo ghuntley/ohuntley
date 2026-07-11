@@ -844,6 +844,19 @@ const TOUCH_MODE = matchMedia("(pointer: coarse)").matches;
 // The keyboard / touch mappings flip signs so each control feels natural
 // at the stick layer.
 function readInputs(dt) {
+  const GP = window.ArcadeGamepad;
+  if (GP) {
+    GP.update();
+    if (GP.connected) {
+      inputs.throttle = THREE.MathUtils.clamp(0.5 - GP.leftY * 0.5, 0, 1);
+      if (GP.rt > 0.2) inputs.throttle = Math.max(inputs.throttle, GP.rt);
+      inputs.yaw = -GP.leftX;
+      inputs.pitch = -GP.rightY;
+      inputs.roll = GP.rightX;
+      inputs.punch = GP.held("a") || GP.rt > 0.55;
+      return;
+    }
+  }
   if (TOUCH_MODE) {
     // Mode 2 sticks: left = throttle (Y) + yaw (X), right = pitch (Y) + roll (X).
     // touchLeftY in [-1..1]: stick UP = -1, DOWN = +1.

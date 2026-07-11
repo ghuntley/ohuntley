@@ -323,8 +323,41 @@
     }
   }
 
+  function applyGamepadInput() {
+    const GP = window.ArcadeGamepad;
+    if (!GP) return;
+    GP.update();
+    if (GP.confirmPressed()) {
+      if (gameOver) level = 1;
+      if (!playing || gameOver) startGame();
+    }
+    if (GP.pressed("x") || GP.pressed("b")) startGame();
+    if ((GP.pressed("start") || GP.pressed("y")) && playing && !gameOver) {
+      paused = !paused;
+      pauseOverlay.hidden = !paused;
+    }
+    if (!playing || gameOver || paused) return;
+    const dir = GP.consumeDirection();
+    if (!dir) return;
+    switch (dir) {
+      case "ArrowUp":
+        tryQueueDir(DIR_UP);
+        break;
+      case "ArrowDown":
+        tryQueueDir(DIR_DOWN);
+        break;
+      case "ArrowLeft":
+        tryQueueDir(DIR_LEFT);
+        break;
+      case "ArrowRight":
+        tryQueueDir(DIR_RIGHT);
+        break;
+    }
+  }
+
   function loop(now) {
     raf = requestAnimationFrame(loop);
+    applyGamepadInput();
     if (!playing || paused || gameOver) {
       draw();
       return;

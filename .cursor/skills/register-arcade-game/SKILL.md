@@ -24,6 +24,7 @@ Copy and complete when adding or auditing a game:
 - [ ] Scores (if applicable): `arcade-scores.js` + `ArcadeScores.record("<slug>", score)`
 - [ ] Tokens (optional): load `../arcade-tokens.js` before `arcade-scores.js`
 - [ ] Touch: mobile playable per `.cursor/skills/mobile-touch-compatibility/SKILL.md`
+- [ ] Gamepad: Xbox / Bluetooth via `arcade-gamepad.js` per `.cursor/skills/gamepad-compatibility/SKILL.md`
 ```
 
 ## 1. Lobby entry (`index.html`)
@@ -79,11 +80,12 @@ Each game lives in its own folder with `index.html`. Follow existing games (`cli
 ```html
 <script src="../arcade-tokens.js"></script>
 <script src="../arcade-scores.js"></script>
+<script src="../arcade-gamepad.js"></script>
 <script src="./game.js"></script>
 <script src="/sw-register.js"></script>
 ```
 
-Load order: `arcade-tokens.js` before `arcade-scores.js` (tokens auto-award on `record()`).
+Load order: `arcade-tokens.js` before `arcade-scores.js` (tokens auto-award on `record()`). **`arcade-gamepad.js` before game JS** (see gamepad skill).
 
 ## 5. Leaderboards (`arcade-scores.js`)
 

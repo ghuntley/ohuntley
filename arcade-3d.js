@@ -2654,6 +2654,35 @@ function startArcade() {
 
     const playing = arcadePlaying();
     if (playing) {
+      const GP = window.ArcadeGamepad;
+      if (GP) {
+        GP.update();
+        if (GP.connected) {
+          if (!controls.isLocked && !touchPlayMode && GP.confirmPressed()) {
+            enterArcadePlayMode();
+          }
+          if (controls.isLocked || touchPlayMode) {
+            walkInputArmed = true;
+            if (Math.abs(GP.leftX) > 0.1 || Math.abs(GP.leftY) > 0.1) {
+              touchDrive.dx = GP.leftX;
+              touchDrive.dz = -GP.leftY;
+            }
+            if (Math.abs(GP.rightX) > 0.06 || Math.abs(GP.rightY) > 0.06) {
+              camera.rotation.y -= GP.rightX * 0.042;
+              camera.rotation.x = THREE.MathUtils.clamp(
+                camera.rotation.x - GP.rightY * 0.028,
+                -Math.PI / 2 + 0.06,
+                Math.PI / 2 - 0.06,
+              );
+            }
+            if (GP.pressed("a")) tryJump();
+            if (GP.pressed("x") || GP.pressed("b")) tryArcadeInteract();
+            if (GP.pressed("start") && !tokenShopOpen) openTokenShop();
+            if (GP.pressed("back") && touchPlayMode) exitTouchPlayMode();
+          }
+        }
+      }
+
       const canWalk =
         touchPlayMode || (document.hasFocus() && walkInputArmed);
       if (canWalk) {

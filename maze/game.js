@@ -632,49 +632,51 @@ function updateTimer() {
 }
 
 function movePlayer(e) {
-    if (e.code === 'KeyR') {
+    handleMoveKey(e.code);
+    if (e.code === 'KeyR' || e.code === 'KeyP' || e.code === 'Escape' || e.code === 'Space') {
         e.preventDefault();
+    }
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+    }
+}
+
+function handleMoveKey(code) {
+    if (code === 'KeyR') {
         restartGame();
         return;
     }
-    if ((e.code === 'KeyP' || e.code === 'Escape') && gameStarted && !gameWon) {
-        e.preventDefault();
+    if ((code === 'KeyP' || code === 'Escape') && gameStarted && !gameWon) {
         togglePause();
         return;
     }
-    if (e.code === 'Space') {
-        e.preventDefault();
+    if (code === 'Space') {
         if (gameStarted && !gameWon) togglePause();
         return;
     }
 
     if (gameWon || gamePaused) return;
 
-    // Only handle keydown events for arrow keys
-    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) {
         return;
     }
 
-    // Check if enough time has passed since last move (200ms cooldown)
     const currentTime = Date.now();
     if (currentTime - lastMoveTime < 200) {
         return;
     }
     lastMoveTime = currentTime;
 
-    // Prevent default browser scrolling for arrow keys
-    e.preventDefault();
-
     if (!gameStarted) {
         gameStarted = true;
         startTime = Date.now();
     }
 
-    const speed = cellSize;  // Move one cell at a time
+    const speed = cellSize;
     let newX = player.x;
     let newY = player.y;
 
-    switch (e.key) {
+    switch (code) {
         case 'ArrowUp':
             newY = Math.floor(player.y / cellSize) * cellSize - cellSize;
             break;
@@ -709,6 +711,18 @@ function movePlayer(e) {
     }
 
     drawMaze();
+}
+
+function pollMazeGamepad() {
+    const GP = window.ArcadeGamepad;
+    if (!GP) return;
+    GP.update();
+    if (GP.pressed("b") || GP.pressed("x")) restartGame();
+    if (GP.pressed("start") || GP.pressed("y")) {
+        if (gameStarted && !gameWon) togglePause();
+    }
+    const dir = GP.consumeDirection();
+    if (dir) handleMoveKey(dir);
 }
 
 function restartGame() {
@@ -775,3 +789,8 @@ displayHighScores();
 
 // Initialize touch controls
 initializeTouchControls();
+
+(function mazeGamepadLoop() {
+    pollMazeGamepad();
+    requestAnimationFrame(mazeGamepadLoop);
+})();

@@ -521,6 +521,7 @@
 
   <script src="../arcade-tokens.js"></script>
   <script src="../arcade-scores.js"></script>
+  <script src="../arcade-gamepad.js"></script>
   <script>
 (function () {
   const TICK_MS = 2600;
@@ -1155,6 +1156,26 @@
   el("rngRest").value = 1;
   applyTickInterval();
   render();
+
+  (function tycoonGamepadLoop() {
+    const GP = window.ArcadeGamepad;
+    if (GP) {
+      GP.update();
+      if (GP.pressed("start") || GP.pressed("y")) el("btnPause").click();
+      if (GP.pressed("x") || GP.pressed("b")) el("btnReset").click();
+      if (GP.pressed("lb") || GP.pressed("dup")) {
+        s.speed = 1;
+        applyTickInterval();
+      } else if (GP.pressed("rb") || GP.pressed("ddown")) {
+        s.speed = 2;
+        applyTickInterval();
+      } else if (GP.pressed("rt") || GP.pressed("dright")) {
+        s.speed = 3;
+        applyTickInterval();
+      }
+    }
+    requestAnimationFrame(tycoonGamepadLoop);
+  })();
 })();
   </script>
   <script src="/sw-register.js"></script>

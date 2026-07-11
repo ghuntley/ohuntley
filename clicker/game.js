@@ -950,6 +950,14 @@
       state.totalSparks += gain;
     }
     renderTopbar();
+    const GP = window.ArcadeGamepad;
+    if (GP) {
+      GP.update();
+      if (GP.pressed("a") || GP.pressed("rt")) clickAnvil();
+      if (GP.pressed("y")) openAscendModal();
+      if (GP.pressed("x")) dom.saveBtn?.click();
+      if (GP.pressed("b")) dom.muteBtn?.click();
+    }
     requestAnimationFrame(tick);
   }
 

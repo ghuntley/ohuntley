@@ -877,6 +877,28 @@ function main() {
   const clock = new THREE.Clock();
 
   function step(dt) {
+    const GP = window.ArcadeGamepad;
+    if (GP) {
+      GP.update();
+      if (GP.connected) {
+        if (!controls.isLocked && GP.confirmPressed()) controls.lock();
+        if (controls.isLocked) {
+          GP.applyMoveKeys(keys);
+          if (GP.held("rt") || GP.held("rb")) {
+            firingHeld = true;
+            fire();
+          }
+          if (GP.pressed("a")) pendingJump = true;
+          if (GP.pressed("x")) reload();
+          camera.rotation.y -= GP.rightX * 0.042;
+          camera.rotation.x = Math.max(
+            -Math.PI * 0.49,
+            Math.min(Math.PI * 0.49, camera.rotation.x - GP.rightY * 0.032),
+          );
+        }
+      }
+    }
+
     if (firingHeld) fire();
 
     if (!controls.isLocked || gameOver || won) {

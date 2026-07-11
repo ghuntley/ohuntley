@@ -1031,6 +1031,25 @@ const clock = new THREE.Clock();
 function animate() {
   const dt = Math.min(clock.getDelta(), 1 / 30);
 
+  const GP = window.ArcadeGamepad;
+  if (GP) {
+    GP.update();
+    if (GP.connected) {
+      if (!pointerLocked && GP.confirmPressed()) canvas.requestPointerLock?.();
+      if (!runActive && GP.confirmPressed()) startRun();
+      if (pointerLocked) {
+        GP.applyMoveKeyMap(keys);
+        if (GP.pressed("a") || GP.pressed("x")) jumpBuffer = JUMP_BUFFER;
+        if (GP.pressed("y") || GP.pressed("b")) respawn();
+        camYaw -= GP.rightX * MOUSE_SENS * 28;
+        camPitch = Math.max(
+          CAM_PITCH_MIN,
+          Math.min(CAM_PITCH_MAX, camPitch + GP.rightY * MOUSE_SENS * 18),
+        );
+      }
+    }
+  }
+
   if (pointerLocked && runActive && !runFinished) {
     runTime += dt;
     physics(dt);

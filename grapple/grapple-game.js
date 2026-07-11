@@ -1197,6 +1197,25 @@ function main() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.05);
 
+    const GP = window.ArcadeGamepad;
+    if (GP) {
+      GP.update();
+      if (GP.connected) {
+        if (!controls.isLocked && GP.confirmPressed()) controls.lock();
+        if (controls.isLocked && !won) {
+          GP.applyMoveKeys(keys);
+          if (GP.pressed("a") || GP.pressed("x")) pendingJump = true;
+          if (GP.pressed("b")) releaseHook();
+          if (GP.pressed("rt") || GP.pressed("rb") || GP.pressed("y")) tryFireHook();
+          camera.rotation.y -= GP.rightX * 0.042;
+          camera.rotation.x = Math.max(
+            -Math.PI * 0.49,
+            Math.min(Math.PI * 0.49, camera.rotation.x - GP.rightY * 0.032),
+          );
+        }
+      }
+    }
+
     if (controls.isLocked && !won) {
       if (!started && (keys.size > 0 || pendingJump)) {
         started = true;
