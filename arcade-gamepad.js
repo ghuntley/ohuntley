@@ -20,6 +20,12 @@
   let pollRaf = 0;
   let scanActive = false;
   let scanTicks = 0;
+  let scanTimer = 0;
+  let burstPollsLeft = 0;
+  const SCAN_BURST_FRAMES = 36;
+  const SCAN_INTERVAL_MS = 32;
+  const SCAN_TIMEOUT_MS = 12000;
+  let scanStartedAt = 0;
   /** @type {Map<string, boolean>} */
   const prevHeld = new Map();
   /** @type {number[]} */
@@ -270,43 +276,79 @@
     return held("a") || held("start");
   }
 
-  function pollLoop() {
-    pollRaf = w.requestAnimationFrame(pollLoop);
-    if (!running) return;
-    if (w.document.visibilityState === "hidden") return;
+  function finishScan(success) {
+    scanActive = false;
+    scanTicks = 0;
+    scanStartedAt = 0;
+    if (scanTimer) {
+      w.clearInterval(scanTimer);
+      scanTimer = 0;
+    }
+    if (!hintEl || !success) return;
+    hintEl.textContent = "Controller detected. You can close this panel and play.";
+  }
 
+  function stopScan() {
+    scanActive = false;
+    scanTicks = 0;
+    scanStartedAt = 0;
+    if (scanTimer) {
+      w.clearInterval(scanTimer);
+      scanTimer = 0;
+    }
+  }
+
+  function wakePollBurst(frames = SCAN_BURST_FRAMES) {
+    burstPollsLeft = Math.max(burstPollsLeft, frames);
+  }
+
+  function emitConnectionChange(wasConnected) {
+    if (wasConnected === state.connected) return;
+    if (state.connected) {
+      w.dispatchEvent(
+        new CustomEvent("arcade-gamepad-connected", { detail: { id: state.id } }),
+      );
+      if (scanActive) finishScan(true);
+    } else {
+      w.dispatchEvent(new CustomEvent("arcade-gamepad-disconnected"));
+    }
+    refreshConnectionUI();
+  }
+
+  function syncPollNow() {
     const wasConnected = state.connected;
     pollOnce();
     commitEdges();
-
-    if (wasConnected !== state.connected) {
-      if (state.connected) {
-        w.dispatchEvent(
-          new CustomEvent("arcade-gamepad-connected", { detail: { id: state.id } }),
-        );
-      } else {
-        w.dispatchEvent(new CustomEvent("arcade-gamepad-disconnected"));
-      }
-    }
-
-    refreshConnectionUI();
+    emitConnectionChange(wasConnected);
 
     if (scanActive) {
       scanTicks += 1;
-      if (state.connected) {
-        if (hintEl) {
-          hintEl.textContent = "Controller detected. You can close this panel and play.";
-        }
-        scanActive = false;
-        scanTicks = 0;
-      } else if (scanTicks > 90) {
+      if (state.connected) return;
+      if (
+        scanStartedAt &&
+        performance.now() - scanStartedAt >= SCAN_TIMEOUT_MS
+      ) {
+        stopScan();
         if (hintEl) {
           hintEl.textContent =
             "No controller detected yet. Confirm Bluetooth pairing, then scan again.";
         }
-        scanActive = false;
-        scanTicks = 0;
       }
+    }
+  }
+
+  function pollLoop() {
+    pollRaf = w.requestAnimationFrame(pollLoop);
+    if (!running) return;
+
+    const visible = w.document.visibilityState === "visible";
+    if (!visible && !scanActive) return;
+
+    syncPollNow();
+
+    if (visible && burstPollsLeft > 0) {
+      burstPollsLeft -= 1;
+      syncPollNow();
     }
   }
 
@@ -319,8 +361,9 @@
     running = true;
     w.addEventListener("gamepadconnected", onConnect);
     w.addEventListener("gamepaddisconnected", onDisconnect);
-    pollOnce();
-    commitEdges();
+    w.addEventListener("focus", onWindowFocus);
+    w.document.addEventListener("visibilitychange", onVisibilityChange);
+    syncPollNow();
     ensurePollLoop();
   }
 
@@ -330,8 +373,15 @@
       w.cancelAnimationFrame(pollRaf);
       pollRaf = 0;
     }
+    if (scanTimer) {
+      w.clearInterval(scanTimer);
+      scanTimer = 0;
+    }
+    burstPollsLeft = 0;
     w.removeEventListener("gamepadconnected", onConnect);
     w.removeEventListener("gamepaddisconnected", onDisconnect);
+    w.removeEventListener("focus", onWindowFocus);
+    w.document.removeEventListener("visibilitychange", onVisibilityChange);
     cachedPadIndex = -1;
     pad = null;
     state.connected = false;
@@ -339,13 +389,35 @@
   }
 
   function onConnect(e) {
-    if (e?.gamepad && Number.isInteger(e.gamepad.index)) {
-      cachedPadIndex = e.gamepad.index;
+    const gp = e?.gamepad;
+    if (gp && Number.isInteger(gp.index) && gp.connected) {
+      cachedPadIndex = gp.index;
+      pad = gp;
     }
+    wakePollBurst(SCAN_BURST_FRAMES);
+    syncPollNow();
   }
 
   function onDisconnect(e) {
-    if (e?.gamepad && e.gamepad.index === cachedPadIndex) cachedPadIndex = -1;
+    if (e?.gamepad && e.gamepad.index === cachedPadIndex) {
+      cachedPadIndex = -1;
+      pad = null;
+    }
+    syncPollNow();
+  }
+
+  function onWindowFocus() {
+    if (!running) return;
+    wakePollBurst(SCAN_BURST_FRAMES);
+    syncPollNow();
+  }
+
+  function onVisibilityChange() {
+    if (!running) return;
+    if (w.document.visibilityState !== "visible") return;
+    wakePollBurst(SCAN_BURST_FRAMES);
+    syncPollNow();
+    if (panelOpen && !state.connected) startScan();
   }
 
   /** Kept for API compatibility — polling is automatic via the internal loop. */
@@ -381,30 +453,30 @@
     let steps =
       "<li>Put the controller in pairing mode (hold the sync / pair button).</li>" +
       "<li>Open Bluetooth settings and pair the controller.</li>" +
-      "<li>Return here and tap <strong>Scan for controller</strong>, then press any button on the pad.</li>";
+      "<li>Return here — scanning starts automatically. Press any button on the pad.</li>";
     if (/Mac OS X|Macintosh/i.test(ua)) {
       os = "macOS";
       steps =
         "<li>Hold the Xbox sync button until the logo flashes.</li>" +
         "<li>Open <strong>System Settings → Bluetooth</strong> and select the controller.</li>" +
-        "<li>Return here, tap <strong>Scan for controller</strong>, then press <strong>A</strong>.</li>";
+        "<li>Return here and press <strong>A</strong> — the Pad panel scans automatically.</li>";
     } else if (/Windows/i.test(ua)) {
       os = "Windows";
       steps =
         "<li>Hold the Xbox sync button until the logo flashes.</li>" +
         "<li>Open <strong>Settings → Bluetooth & devices</strong> and add the controller.</li>" +
-        "<li>Return here, tap <strong>Scan for controller</strong>, then press <strong>A</strong>.</li>";
+        "<li>Return here and press <strong>A</strong> — the Pad panel scans automatically.</li>";
     } else if (/Android/i.test(ua)) {
       os = "Android";
       steps =
         "<li>Hold the Xbox sync button until the logo flashes.</li>" +
         "<li>Open <strong>Settings → Connected devices → Pair new device</strong>.</li>" +
-        "<li>Return to the browser, scan, and press any button on the pad.</li>";
+        "<li>Return to the browser and press any button on the pad.</li>";
     } else if (/iPhone|iPad|iPod/i.test(ua)) {
       os = "iOS / iPadOS";
       steps =
         "<li>Use an MFi / supported controller; Xbox One/Series pads pair in <strong>Settings → Bluetooth</strong>.</li>" +
-        "<li>After pairing, return here, scan, and press any button on the pad.</li>";
+        "<li>After pairing, return here and press any button on the pad.</li>";
     }
     return { os, steps };
   }
@@ -435,7 +507,7 @@
     if (statusText) {
       statusText.textContent = connected
         ? `Connected · ${shortPadName(id)}`
-        : "Not connected · pair in Bluetooth settings, then scan";
+        : "Not connected · open Pad to scan";
     }
   }
 
@@ -444,6 +516,7 @@
     panelOpen = true;
     panelEl.hidden = false;
     refreshConnectionUI();
+    if (!state.connected) startScan();
     panelEl.querySelector(".arcade-gp-scan")?.focus({ preventScroll: true });
   }
 
@@ -451,17 +524,30 @@
     if (!panelEl) return;
     panelOpen = false;
     panelEl.hidden = true;
-    scanActive = false;
-    scanTicks = 0;
+    if (scanActive) stopScan();
     toggleBtn?.focus({ preventScroll: true });
   }
 
   function startScan() {
+    if (state.connected) return;
     if (hintEl) {
-      hintEl.textContent = "Listening… press any button on your controller.";
+      hintEl.textContent =
+        "Listening… press any button on your controller now.";
     }
     scanActive = true;
     scanTicks = 0;
+    scanStartedAt = performance.now();
+    wakePollBurst(SCAN_BURST_FRAMES);
+    syncPollNow();
+    if (scanTimer) w.clearInterval(scanTimer);
+    scanTimer = w.setInterval(() => {
+      if (!scanActive) {
+        w.clearInterval(scanTimer);
+        scanTimer = 0;
+        return;
+      }
+      syncPollNow();
+    }, SCAN_INTERVAL_MS);
   }
 
   function mountConnectionUI() {
@@ -627,7 +713,7 @@ body.arcade-gp-active a.home {
       guide.steps +
       "</ol>" +
       '<div class="arcade-gp-actions">' +
-      '<button type="button" class="arcade-gp-scan">Scan for controller</button>' +
+      '<button type="button" class="arcade-gp-scan">Scan again</button>' +
       '<button type="button" class="arcade-gp-done">Done</button>' +
       "</div></div></div>";
 
