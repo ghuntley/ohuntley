@@ -111,6 +111,10 @@ const VIBE = {
   bloomStrength: 0.62,
   bloomRadius: 0.48,
   bloomThreshold: 0.22,
+  /** Bloom pass resolution scale (lower = faster lobby render). */
+  bloomResScale: 0.5,
+  /** Cap device pixel ratio for smoother frame rate on retina displays. */
+  maxPixelRatio: 1.5,
   /** Corridor footprint (meters) — long aisle like classic 80s arcade rows */
   roomW: 15,
   roomD: 32,
@@ -2020,7 +2024,8 @@ function startArcade() {
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const pixelRatio = Math.min(window.devicePixelRatio, VIBE.maxPixelRatio);
+  renderer.setPixelRatio(pixelRatio);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -2031,10 +2036,12 @@ function startArcade() {
   renderer.domElement.style.touchAction = "none";
 
   const composer = new EffectComposer(renderer);
-  composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  composer.setPixelRatio(pixelRatio);
   composer.addPass(new RenderPass(scene, camera));
+  const bloomW = Math.max(256, Math.round(window.innerWidth * VIBE.bloomResScale));
+  const bloomH = Math.max(256, Math.round(window.innerHeight * VIBE.bloomResScale));
   const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    new THREE.Vector2(bloomW, bloomH),
     VIBE.bloomStrength,
     VIBE.bloomRadius,
     VIBE.bloomThreshold
@@ -2826,6 +2833,10 @@ function startArcade() {
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
     composer.setSize(w, h);
+    const bw = Math.max(256, Math.round(w * VIBE.bloomResScale));
+    const bh = Math.max(256, Math.round(h * VIBE.bloomResScale));
+    bloomPass.resolution.set(bw, bh);
+    bloomPass.setSize(bw, bh);
   });
 
   if (window.location.protocol === "file:" && hintEl) {

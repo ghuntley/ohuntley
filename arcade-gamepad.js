@@ -11,7 +11,6 @@
   const DEADZONE = 0.18;
   const STICK_AS_DPAD = 0.52;
   const TRIGGER_THRESHOLD = 0.35;
-  const IDLE_POLL_MS = 420;
   const BTN_NAMES = [
     "a", "b", "x", "y", "lb", "rb", "lt", "rt",
     "back", "start", "ls", "rs", "dup", "ddown", "dleft", "dright",
@@ -19,7 +18,6 @@
 
   let running = false;
   let pollRaf = 0;
-  let lastPollMs = 0;
   let scanActive = false;
   let scanTicks = 0;
   /** @type {Map<string, boolean>} */
@@ -272,20 +270,12 @@
     return held("a") || held("start");
   }
 
-  function needsFastPoll() {
-    return state.connected || panelOpen || scanActive;
-  }
-
-  function pollLoop(now) {
+  function pollLoop() {
     pollRaf = w.requestAnimationFrame(pollLoop);
     if (!running) return;
     if (w.document.visibilityState === "hidden") return;
 
-    const fast = needsFastPoll();
-    if (!fast && now - lastPollMs < IDLE_POLL_MS) return;
-
     const wasConnected = state.connected;
-    lastPollMs = now;
     pollOnce();
     commitEdges();
 
@@ -321,7 +311,7 @@
   }
 
   function ensurePollLoop() {
-    if (!pollRaf && running) pollLoop(0);
+    if (!pollRaf && running) pollLoop();
   }
 
   function start() {
@@ -352,12 +342,10 @@
     if (e?.gamepad && Number.isInteger(e.gamepad.index)) {
       cachedPadIndex = e.gamepad.index;
     }
-    lastPollMs = 0;
   }
 
   function onDisconnect(e) {
     if (e?.gamepad && e.gamepad.index === cachedPadIndex) cachedPadIndex = -1;
-    lastPollMs = 0;
   }
 
   /** Kept for API compatibility — polling is automatic via the internal loop. */
@@ -474,7 +462,6 @@
     }
     scanActive = true;
     scanTicks = 0;
-    lastPollMs = 0;
   }
 
   function mountConnectionUI() {

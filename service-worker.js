@@ -12,7 +12,7 @@
  *     lobby loads even when no specific page is cached.
  */
 
-const VERSION = "funland-arcade-v12";
+const VERSION = "funland-arcade-v13";
 
 const PRECACHE_URLS = [
   "/",
