@@ -34,6 +34,7 @@ BOT_MODULES = [
     "game_bots.meerkat",
     "game_bots.meerkat_tycoon",
     "game_bots.grapple",
+    "game_bots.towers",
 ]
 
 

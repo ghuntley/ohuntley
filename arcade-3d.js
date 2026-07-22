@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
@@ -86,7 +87,7 @@ const DEFAULT_GAMES = [
   {
     slug: "towers",
     title: "GRID SENTINEL",
-    blurb: "Tower defense · pad placement · 20 waves",
+    blurb: "Tower defense · 3 maps · 6 turrets · 20 waves",
     marquee: "#b8ff6a",
     screen: "#7df9ff",
   },
@@ -125,6 +126,12 @@ const VIBE = {
   /** Corridor footprint (meters) — long aisle like classic 80s arcade rows */
   roomW: 15,
   roomD: 32,
+  /**
+   * SketchUp "Arcade" room style (share link in loadSketchUpArcadeGltf).
+   * Export GLB from SketchUp → vendor/models/arcade.glb to use the real mesh.
+   */
+  useSketchUpArcade: true,
+  sketchupModelUrl: "./vendor/models/arcade.glb",
 };
 
 function hexToColor(hex) {
@@ -177,6 +184,151 @@ function makeCheckerTexture() {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
   return tex;
+}
+
+/** Red brick — SketchUp Arcade side walls. */
+function makeSketchUpBrickTexture() {
+  const w = 512;
+  const h = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const brickW = 64;
+  const brickH = 28;
+  const mortar = "#9a8a78";
+  const reds = ["#8b3a2a", "#9e4230", "#7a3224", "#a04836"];
+  ctx.fillStyle = mortar;
+  ctx.fillRect(0, 0, w, h);
+  let row = 0;
+  for (let y = 0; y < h; y += brickH + 4) {
+    const off = row % 2 ? brickW / 2 : 0;
+    for (let x = -off; x < w; x += brickW + 4) {
+      ctx.fillStyle = reds[(row + Math.floor(x / brickW)) % reds.length];
+      ctx.fillRect(x + 2, y + 2, brickW, brickH);
+    }
+    row += 1;
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 2);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Isometric cube illusion — SketchUp Arcade back wall. */
+function makeSketchUpIsoCubeWallTexture() {
+  const s = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = s;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#f2f2f2";
+  ctx.fillRect(0, 0, s, s);
+  const u = 36;
+  const h = u * 0.55;
+  const cols = Math.ceil(s / u) + 2;
+  const rows = Math.ceil(s / h) + 2;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = col * u + (row % 2 ? u / 2 : 0);
+      const y = row * h;
+      const shade = (row + col) % 3;
+      ctx.fillStyle = shade === 0 ? "#ffffff" : shade === 1 ? "#bdbdbd" : "#757575";
+      ctx.beginPath();
+      ctx.moveTo(x, y + h);
+      ctx.lineTo(x + u / 2, y);
+      ctx.lineTo(x + u, y + h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#555";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 1.2);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** TV-static speckle floor — SketchUp Arcade. */
+function makeSketchUpSpeckleFloorTexture() {
+  const s = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = s;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#888";
+  ctx.fillRect(0, 0, s, s);
+  for (let i = 0; i < 48000; i++) {
+    const v = Math.random();
+    ctx.fillStyle = v < 0.33 ? "#111" : v < 0.66 ? "#eee" : "#666";
+    ctx.fillRect((Math.random() * s) | 0, (Math.random() * s) | 0, 2, 2);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 14);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Drop-ceiling tiles — SketchUp Arcade. */
+function makeSketchUpDropCeilingTexture() {
+  const s = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = s;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#8a8680";
+  ctx.fillRect(0, 0, s, s);
+  const tw = 128;
+  const th = 96;
+  for (let y = 0; y < s; y += th) {
+    for (let x = 0; x < s; x += tw) {
+      ctx.fillStyle = "#d8d0c0";
+      ctx.fillRect(x + 3, y + 3, tw - 6, th - 6);
+      ctx.strokeStyle = "#6a6660";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, tw, th);
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 7);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/**
+ * Load exported SketchUp GLB (File → Export → GLB in SketchUp desktop).
+ * Share link (view-only) cannot be fetched at runtime — place arcade.glb locally.
+ * @returns {Promise<THREE.Group | null>}
+ */
+async function loadSketchUpArcadeGltf(url) {
+  try {
+    const gltf = await new GLTFLoader().loadAsync(url);
+    const root = gltf.scene;
+    root.name = "sketchup-arcade-env";
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(root);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const targetW = VIBE.roomW;
+    const targetD = VIBE.roomD;
+    const fit = Math.min(targetW / Math.max(size.x, 0.01), targetD / Math.max(size.z, 0.01));
+    root.scale.setScalar(fit);
+    root.position.x = -center.x * fit;
+    root.position.z = -center.z * fit;
+    root.position.y = -box.min.y * fit;
+    root.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+      }
+    });
+    return root;
+  } catch (_) {
+    return null;
+  }
 }
 
 function makeCeilingGridTexture() {
@@ -605,6 +757,136 @@ function wrapText(ctx, text, x, y, maxW, lineH) {
   ctx.fillText(line.trim(), x, yy);
 }
 
+/** Side art — neon zigzag/lightning panel (Aston Cook arcade style). */
+function makeCabinetSideTexture(game) {
+  const w = 256;
+  const h = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const accent = typeof game.marquee === "string" ? game.marquee : "#9966ff";
+  const bg = "#141018";
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 14;
+  ctx.lineJoin = "round";
+  ctx.shadowColor = accent;
+  ctx.shadowBlur = 22;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.15, h * 0.08);
+  ctx.lineTo(w * 0.55, h * 0.42);
+  ctx.lineTo(w * 0.25, h * 0.58);
+  ctx.lineTo(w * 0.72, h * 0.92);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(6, 6, w - 12, h - 12);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Top marquee panel texture for the cabinet hood. */
+function makeCabinetMarqueeTexture(game) {
+  const w = 512;
+  const h = 160;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const accent = typeof game.marquee === "string" ? game.marquee : "#ff66cc";
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, "#1a0828");
+  g.addColorStop(0.5, "#0a1020");
+  g.addColorStop(1, "#081828");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 5;
+  ctx.strokeRect(4, 4, w - 8, h - 8);
+  const title = String(game.title || "ARCADE").toUpperCase();
+  let size = 54;
+  ctx.font = `bold ${size}px monospace`;
+  while (ctx.measureText(title).width > w - 40 && size > 24) {
+    size -= 3;
+    ctx.font = `bold ${size}px monospace`;
+  }
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = accent;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = accent;
+  ctx.fillText(title, w / 2, h / 2);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#fff";
+  ctx.fillText(title, w / 2, h / 2);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Lower kick-plate — synthwave palms / neon strip. */
+function makeCabinetKickTexture(game) {
+  const w = 512;
+  const h = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const accent = typeof game.screen === "string" ? game.screen : "#00ffaa";
+  ctx.fillStyle = "#0a0810";
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 5; i++) {
+    const px = 60 + i * 95;
+    ctx.beginPath();
+    ctx.moveTo(px, h);
+    ctx.quadraticCurveTo(px + 8, h - 55, px + 28, h - 70);
+    ctx.lineTo(px + 32, h - 48);
+    ctx.quadraticCurveTo(px + 12, h - 38, px, h);
+    ctx.fillStyle = `rgba(0, 200, 120, 0.35)`;
+    ctx.fill();
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * Wrap neon trim around a cabinet shell (Aston Cook / Sketchfab arcade style).
+ * @param {THREE.Group} group
+ * @param {number} hw half-width
+ * @param {number} hh half-height (body center y)
+ * @param {number} hd half-depth
+ * @param {number} bodyH body height
+ * @param {number} trimColor
+ */
+function addCabinetNeonTrim(group, hw, hh, hd, bodyH, trimColor = 0x00ffff) {
+  const yBot = hh - bodyH / 2;
+  const yTop = hh + bodyH / 2;
+  const tubes = [];
+  tubes.push(addNeonTube(group, 0, yTop, hd + 0.02, hw * 2, "x", trimColor, 1.5));
+  tubes.push(addNeonTube(group, 0, yBot, hd + 0.02, hw * 2, "x", trimColor, 1.5));
+  tubes.push(addNeonTube(group, -hw, hh, hd + 0.02, bodyH, "y", trimColor, 1.35));
+  tubes.push(addNeonTube(group, hw, hh, hd + 0.02, bodyH, "y", trimColor, 1.35));
+  tubes.push(addNeonTube(group, -hw, yTop, 0, hd * 2, "z", trimColor, 1.25));
+  tubes.push(addNeonTube(group, hw, yTop, 0, hd * 2, "z", trimColor, 1.25));
+  return tubes;
+}
+
+/**
+ * Lobby cabinet mesh — recreation of Aston Cook's "Arcade Machine 1" (Sketchfab).
+ * Original: https://sketchfab.com/3d-models/arcade-machine-1-05493b19f32946b99a9fa3fb8a5672a9
+ * (view-only on Sketchfab; not downloadable — geometry rebuilt for the lobby.)
+ */
 function createCabinet(game, spec, isHero) {
   const scale = isHero ? 1.12 : 1;
   const group = new THREE.Group();
@@ -612,96 +894,141 @@ function createCabinet(game, spec, isHero) {
   group.userData.title = game.title;
   group.userData.href = `${String(game.slug).replace(/^\//, "").replace(/\/$/, "")}/index.html`;
 
-  const wood = new THREE.MeshStandardMaterial({
-    color: 0x3d1848,
-    roughness: 0.82,
-    metalness: 0.18,
-  });
-  const dark = new THREE.MeshStandardMaterial({
-    color: 0x0c060e,
-    roughness: 0.94,
-    metalness: 0.35,
-  });
-
   const marqC = hexToColor(game.marquee);
   const scrC = hexToColor(game.screen);
-  const sideLMat = new THREE.MeshStandardMaterial({
-    color: marqC,
-    emissive: marqC,
-    emissiveIntensity: 0.35,
-    roughness: 0.55,
-    metalness: 0.1,
+  const trimC = 0x00ffff;
+
+  const shellMat = new THREE.MeshStandardMaterial({
+    color: 0x181820,
+    roughness: 0.88,
+    metalness: 0.12,
   });
-  const sideRMat = new THREE.MeshStandardMaterial({
-    color: scrC,
-    emissive: scrC,
-    emissiveIntensity: 0.32,
-    roughness: 0.55,
-    metalness: 0.1,
+  const darkMat = new THREE.MeshStandardMaterial({
+    color: 0x0a0810,
+    roughness: 0.94,
+    metalness: 0.2,
+  });
+  const sideTex = makeCabinetSideTexture(game);
+  const sideMat = new THREE.MeshStandardMaterial({
+    map: sideTex,
+    roughness: 0.72,
+    metalness: 0.08,
   });
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.35 * scale, 1.55 * scale, 0.85 * scale), wood);
-  body.position.y = 0.775 * scale;
+  const cabW = 0.88 * scale;
+  const cabD = 0.76 * scale;
+  const bodyH = 1.42 * scale;
+  const bodyY = 0.92 * scale;
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(cabW, bodyH, cabD), shellMat);
+  body.position.y = bodyY;
   body.castShadow = true;
   body.receiveShadow = true;
   group.add(body);
 
-  const sideW = 0.08 * scale;
-  const sideH = 1.25 * scale;
-  const sideD = 0.72 * scale;
-  const sideL = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, sideD), sideLMat);
-  sideL.position.set(-0.72 * scale, 0.85 * scale, 0);
+  const sideW = 0.045 * scale;
+  const sideL = new THREE.Mesh(new THREE.BoxGeometry(sideW, bodyH * 0.92, cabD * 0.96), sideMat);
+  sideL.position.set(-cabW / 2 - sideW * 0.4, bodyY, 0);
   group.add(sideL);
-  const sideR = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, sideD), sideRMat);
-  sideR.position.set(0.72 * scale, 0.85 * scale, 0);
+  const sideR = sideL.clone();
+  sideR.position.x = cabW / 2 + sideW * 0.4;
   group.add(sideR);
 
-  const panel = new THREE.Mesh(new THREE.BoxGeometry(1.15 * scale, 0.35 * scale, 0.05 * scale), dark);
-  panel.position.set(0, 0.35 * scale, 0.43 * scale);
-  group.add(panel);
+  addCabinetNeonTrim(group, cabW / 2, bodyY, cabD / 2, bodyH, trimC);
 
-  const marquee = new THREE.Mesh(
-    new THREE.BoxGeometry(1.25 * scale, 0.22 * scale, 0.06 * scale),
-    new THREE.MeshStandardMaterial({
-      color: marqC,
-      emissive: marqC,
-      emissiveIntensity: 1.25,
-      roughness: 0.35,
-      metalness: 0.12,
-    })
+  const kickTex = makeCabinetKickTexture(game);
+  const kick = new THREE.Mesh(
+    new THREE.BoxGeometry(cabW * 0.94, 0.26 * scale, 0.06 * scale),
+    new THREE.MeshStandardMaterial({ map: kickTex, roughness: 0.8, metalness: 0.05 }),
   );
-  marquee.position.set(0, 1.64 * scale, 0.38 * scale);
+  kick.position.set(0, 0.18 * scale, cabD / 2 + 0.02 * scale);
+  group.add(kick);
+
+  const marqueeTex = makeCabinetMarqueeTexture(game);
+  const marquee = new THREE.Mesh(
+    new THREE.BoxGeometry(cabW * 0.96, 0.28 * scale, 0.08 * scale),
+    new THREE.MeshStandardMaterial({
+      map: marqueeTex,
+      emissive: marqC,
+      emissiveIntensity: 0.55,
+      roughness: 0.45,
+      metalness: 0.05,
+    }),
+  );
+  marquee.position.set(0, 1.72 * scale, cabD / 2 - 0.02 * scale);
   group.add(marquee);
 
-  const scr = hexToColor(game.screen);
+  const bezelMat = new THREE.MeshStandardMaterial({
+    color: trimC,
+    emissive: trimC,
+    emissiveIntensity: 1.1,
+    roughness: 0.35,
+    metalness: 0.15,
+  });
+  const bezel = new THREE.Mesh(
+    new THREE.BoxGeometry(cabW * 0.78, cabW * 0.78, 0.05 * scale),
+    bezelMat,
+  );
+  bezel.position.set(0, 1.28 * scale, cabD / 2 + 0.01 * scale);
+  group.add(bezel);
+
   const screenTex = makeTextTexture([game.title, game.blurb], {
-    color: `#${scr.toString(16).padStart(6, "0")}`,
+    color: `#${scrC.toString(16).padStart(6, "0")}`,
     muted: "rgba(200, 255, 240, 0.82)",
     bg: "#040208",
   });
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.05 * scale, 0.72 * scale),
+    new THREE.PlaneGeometry(cabW * 0.62, cabW * 0.62),
     new THREE.MeshStandardMaterial({
       map: screenTex,
-      emissive: scr,
-      emissiveIntensity: 0.78,
+      emissive: scrC,
+      emissiveIntensity: 0.72,
       roughness: 0.45,
       metalness: 0,
-    })
+    }),
   );
-  screen.position.set(0, 1.02 * scale, 0.45 * scale);
+  screen.position.set(0, 1.28 * scale, cabD / 2 + 0.04 * scale);
   group.add(screen);
   group.userData.screenMesh = screen;
 
-  const bezel = new THREE.Mesh(
-    new THREE.BoxGeometry(1.12 * scale, 0.78 * scale, 0.04 * scale),
-    new THREE.MeshStandardMaterial({ color: 0x141018, roughness: 0.3, metalness: 0.8 })
+  const deck = new THREE.Mesh(
+    new THREE.BoxGeometry(cabW * 0.88, 0.06 * scale, cabD * 0.55),
+    darkMat,
   );
-  bezel.position.set(0, 1.02 * scale, 0.41 * scale);
-  group.add(bezel);
+  deck.position.set(0, 0.78 * scale, cabD * 0.18);
+  deck.rotation.x = -0.48;
+  group.add(deck);
 
-  // Floating title — Sprite billboards always face the camera so the label
-  // is readable from anywhere on the arcade floor.
+  const stickBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.045 * scale, 0.055 * scale, 0.08 * scale, 10),
+    darkMat,
+  );
+  stickBase.position.set(0.12 * scale, 0.86 * scale, cabD / 2 + 0.08 * scale);
+  stickBase.rotation.x = -0.48;
+  group.add(stickBase);
+  const stickBall = new THREE.Mesh(
+    new THREE.SphereGeometry(0.055 * scale, 10, 10),
+    new THREE.MeshStandardMaterial({ color: 0xff2244, roughness: 0.45, metalness: 0.1 }),
+  );
+  stickBall.position.set(0.12 * scale, 0.94 * scale, cabD / 2 + 0.14 * scale);
+  group.add(stickBall);
+
+  const btnColors = [0xffdd22, 0x3388ff, 0x33dd66];
+  for (let i = 0; i < 3; i++) {
+    const btn = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06 * scale, 0.025 * scale, 0.06 * scale),
+      new THREE.MeshStandardMaterial({
+        color: btnColors[i],
+        emissive: btnColors[i],
+        emissiveIntensity: 0.35,
+        roughness: 0.4,
+      }),
+    );
+    btn.position.set((-0.14 - i * 0.09) * scale, 0.88 * scale, cabD / 2 + 0.1 * scale);
+    btn.rotation.x = -0.48;
+    group.add(btn);
+  }
+
   const titleTex = makeFloatingTitleTexture(game.title, game.marquee);
   const titleSprite = new THREE.Sprite(
     new THREE.SpriteMaterial({
@@ -709,33 +1036,23 @@ function createCabinet(game, spec, isHero) {
       transparent: true,
       depthTest: true,
       depthWrite: false,
-    })
+    }),
   );
-  const titleW = (isHero ? 2.1 : 1.9) * scale;
+  const titleW = (isHero ? 2.15 : 1.95) * scale;
   titleSprite.scale.set(titleW, titleW * 0.25, 1);
-  const titleBaseY = (isHero ? 2.6 : 2.42) * scale;
+  const titleBaseY = (isHero ? 2.85 : 2.68) * scale;
   titleSprite.position.set(0, titleBaseY, 0);
   titleSprite.renderOrder = 5;
   group.add(titleSprite);
   group.userData.titleSprite = titleSprite;
   group.userData.titleBaseY = titleBaseY;
 
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.2 * scale, 0.12 * scale), dark);
-  legL.position.set(-0.52 * scale, 0.1 * scale, 0.32 * scale);
-  const legR = legL.clone();
-  legR.position.x = 0.52 * scale;
-  const legB = legL.clone();
-  legB.position.set(-0.52 * scale, 0.1 * scale, -0.32 * scale);
-  const legB2 = legL.clone();
-  legB2.position.set(0.52 * scale, 0.1 * scale, -0.32 * scale);
-  group.add(legL, legR, legB, legB2);
-
   group.position.set(spec.x, 0, spec.z);
   group.rotation.y = spec.rotY;
 
   group.updateMatrixWorld(true);
   group.userData.hitBox = new THREE.Box3().setFromObject(group);
-  group.userData.screenLocal = new THREE.Vector3(0, 1.02 * scale, 0.42 * scale);
+  group.userData.screenLocal = new THREE.Vector3(0, 1.28 * scale, cabD / 2 + 0.05 * scale);
 
   return group;
 }
@@ -1817,20 +2134,27 @@ function addRoomEntrySign(container, roomW, roomD, wallH, roomNumber, gameCount)
 }
 
 function buildRoom(container, roomW, roomD, games, opts = {}) {
-  const { isFirst = true, isLast = true, roomIndex = 0, totalRooms = 1 } = opts;
+  const { isFirst = true, isLast = true, roomIndex = 0, totalRooms = 1, skipShell = false } = opts;
   const wallH = 5.2;
-  const floorMap = makeCheckerTexture();
+  const w = roomW / 2;
+  const d = roomD / 2;
+  const sketchUp = VIBE.useSketchUpArcade && !skipShell;
+  let grid = null;
+
+  if (!skipShell) {
+  const floorMap = sketchUp ? makeSketchUpSpeckleFloorTexture() : makeCheckerTexture();
   const floorMat = new THREE.MeshStandardMaterial({
     map: floorMap,
-    roughness: 0.55,
-    metalness: 0.12,
+    roughness: sketchUp ? 0.92 : 0.55,
+    metalness: sketchUp ? 0.02 : 0.12,
   });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomD), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   container.add(floor);
 
-  const grid = new THREE.GridHelper(Math.max(roomW, roomD), 64, 0xff00aa, 0x00fff2);
+  if (!sketchUp) {
+  grid = new THREE.GridHelper(Math.max(roomW, roomD), 64, 0xff00aa, 0x00fff2);
   const gridMats = Array.isArray(grid.material) ? grid.material : [grid.material];
   for (const gm of gridMats) {
     if (gm) {
@@ -1841,18 +2165,27 @@ function buildRoom(container, roomW, roomD, games, opts = {}) {
   }
   grid.position.y = 0.018;
   container.add(grid);
+  }
 
+  const brickMap = sketchUp ? makeSketchUpBrickTexture() : null;
+  const isoMap = sketchUp ? makeSketchUpIsoCubeWallTexture() : null;
   const wallMat = new THREE.MeshStandardMaterial({
-    color: 0x1a0828,
-    roughness: 0.97,
+    color: sketchUp ? 0xffffff : 0x1a0828,
+    map: brickMap || undefined,
+    roughness: sketchUp ? 0.95 : 0.97,
     metalness: 0.02,
   });
+  const backWallMat = sketchUp
+    ? new THREE.MeshStandardMaterial({
+        map: isoMap,
+        roughness: 0.9,
+        metalness: 0.02,
+      })
+    : wallMat;
   const t = wallH / 2;
-  const w = roomW / 2;
-  const d = roomD / 2;
 
   if (isLast) {
-    const back = new THREE.Mesh(new THREE.BoxGeometry(roomW, wallH, 0.38), wallMat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(roomW, wallH, 0.38), backWallMat);
     back.position.set(0, t, -d);
     container.add(back);
   } else {
@@ -1873,26 +2206,29 @@ function buildRoom(container, roomW, roomD, games, opts = {}) {
   right.position.set(w, t, 0);
   container.add(right);
 
-  const ceilMap = makeCeilingGridTexture();
+  const ceilMap = sketchUp ? makeSketchUpDropCeilingTexture() : makeCeilingGridTexture();
   const ceilMat = new THREE.MeshStandardMaterial({
     map: ceilMap,
-    color: 0x08060c,
+    color: sketchUp ? 0xffffff : 0x08060c,
     roughness: 1,
     metalness: 0,
-    emissive: 0xff1493,
-    emissiveIntensity: 0.04,
+    emissive: sketchUp ? 0x000000 : 0xff1493,
+    emissiveIntensity: sketchUp ? 0 : 0.04,
   });
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomD), ceilMat);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.y = wallH;
   container.add(ceil);
+  }
 
   const cyan = 0x00ffee;
   const pink = 0xff1493;
   const gold = 0xffcc00;
 
+  let twinRailMats = [];
+  if (!sketchUp) {
   const tubeZLen = roomD - 3;
-  const twinRailMats = addTwinCeilingRails(container, roomW, roomD, wallH);
+  twinRailMats = addTwinCeilingRails(container, roomW, roomD, wallH);
   addNeonTube(container, 0, wallH - 0.42, 0, tubeZLen * 0.92, "z", cyan, 0.55);
 
   /** Cross-beams and wall grazers */
@@ -1905,15 +2241,17 @@ function buildRoom(container, roomW, roomD, games, opts = {}) {
   addNeonTube(container, 0, 1.25, -d + 0.22, roomW - 2, "x", pink, 0.65);
 
   addWallMurals(container, roomW, roomD, wallH);
-  addHangingSign(container, roomW, roomD, wallH);
-  const { refreshScoreboard } = addBackWallScoreboard(container, roomW, roomD, wallH, games);
   addNeonSkirting(container, roomW, roomD, wallH);
   addCrownMolding(container, roomW, roomD, wallH);
   addMidWallNeonBand(container, roomW, roomD, wallH);
   addAisleStanchions(container, roomW, roomD);
-  const sparkleGroup = addLobbySparkles(container, roomW, roomD, wallH);
   addHighWallPosters(container, roomW, roomD, wallH);
-  addCornerUplights(container, roomW, roomD);
+  }
+
+  addHangingSign(container, roomW, roomD, wallH);
+  const { refreshScoreboard } = addBackWallScoreboard(container, roomW, roomD, wallH, games);
+  const sparkleGroup = sketchUp ? null : addLobbySparkles(container, roomW, roomD, wallH);
+  if (!sketchUp) addCornerUplights(container, roomW, roomD);
 
   let exitSignMat = null;
   let marqueeBulbMats = [];
@@ -1981,6 +2319,13 @@ function startArcade() {
   const instructions = document.getElementById("instructions");
   const promptEl = document.getElementById("hud-prompt");
   const hintEl = document.getElementById("hint");
+
+  bootArcade(games, blocker, instructions, promptEl, hintEl).catch((err) => {
+    console.error("Arcade lobby failed to start:", err);
+  });
+}
+
+async function bootArcade(games, blocker, instructions, promptEl, hintEl) {
 
   function requestPointerLockSupported() {
     const el = document.body;
@@ -2056,6 +2401,15 @@ function startArcade() {
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
 
+  let sketchupEnv = null;
+  if (VIBE.useSketchUpArcade) {
+    sketchupEnv = await loadSketchUpArcadeGltf(VIBE.sketchupModelUrl);
+    if (sketchupEnv) {
+      scene.background = new THREE.Color(0x3a3835);
+      scene.fog = new THREE.Fog(0x4a4845, 14, 58);
+    }
+  }
+
   const refreshScoreboards = [];
   const cabinets = [];
   const lobbyBenchesAll = [];
@@ -2073,7 +2427,11 @@ function startArcade() {
       isLast: ri === roomCount - 1,
       roomIndex: ri,
       totalRooms: roomCount,
+      skipShell: !!(sketchupEnv && ri === 0),
     });
+    if (sketchupEnv && ri === 0) {
+      roomRoot.add(sketchupEnv);
+    }
     if (ri === 0) {
       lobbyAnim = roomBuilt.lobbyAnim;
       floorGrid = roomBuilt.floorGrid;
@@ -2095,7 +2453,7 @@ function startArcade() {
       const c = hexToColor(g.marquee);
       const col = new THREE.Color(c);
       const pl = new THREE.PointLight(col, 1.18, 7.2, 2);
-      const lo = new THREE.Vector3(0, 2.35, 0.52);
+      const lo = new THREE.Vector3(0, 2.58, 0.48);
       lo.applyAxisAngle(new THREE.Vector3(0, 1, 0), cab.rotation.y);
       pl.position.copy(cab.position).add(lo);
       roomRoot.add(pl);

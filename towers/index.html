@@ -14,7 +14,7 @@
     <header class="topbar">
       <div class="title-block">
         <h1>GRID SENTINEL</h1>
-        <p class="subtitle">Bloons-style waves · Defense Grid placement</p>
+        <p class="subtitle"><span id="mapName">Core Run</span> · Bloons waves · Defense Grid pads</p>
       </div>
       <div class="stats" aria-live="polite">
         <span class="stat gold"><span class="label">Gold</span> <strong id="goldVal">120</strong></span>
@@ -26,47 +26,88 @@
 
     <div class="stage-wrap">
       <canvas id="game" tabindex="0" role="application" aria-label="Tower defense grid"></canvas>
-      <div class="overlay" id="startOverlay">
+      <div class="tutorial" id="tutorial" hidden aria-live="polite"></div>
+      <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+      <div class="overlay" id="mapSelectOverlay">
+        <div class="overlay-card wide">
+          <h2>Select Map</h2>
+          <div class="map-list" id="mapList"></div>
+          <label class="toggle-row">
+            <input type="checkbox" id="hardModeToggle" />
+            Hard mode (15 lives · +25% enemy HP)
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" id="autoWaveToggle" />
+            Auto-send waves (5s after clear)
+          </label>
+          <button type="button" class="primary" id="mapStartBtn">Launch</button>
+        </div>
+      </div>
+
+      <div class="overlay" id="startOverlay" hidden>
         <div class="overlay-card">
           <h2>Defend the Core</h2>
           <p>Enemies follow the glowing lane. Place turrets on marked pads, then send waves.</p>
-          <p class="desktop-only">Pick a tower below · click a pad to build · <kbd>Space</kbd> to send wave</p>
-          <p class="touch-only">Pick a tower · tap a pad · tap Send Wave</p>
-          <button type="button" class="primary" id="startBtn">Start mission</button>
         </div>
       </div>
+
+      <div class="overlay" id="pauseOverlay" hidden>
+        <div class="overlay-card">
+          <h2>Paused</h2>
+          <button type="button" class="primary" id="resumeBtn">Resume</button>
+        </div>
+      </div>
+
       <div class="overlay" id="gameOverOverlay" hidden>
         <div class="overlay-card">
           <h2 id="gameOverTitle">Core Breached</h2>
           <p>Final score: <strong id="finalScore">0</strong></p>
           <p>Wave reached: <strong id="finalWave">0</strong></p>
           <div class="overlay-actions">
-            <button type="button" class="primary" id="retryBtn">Try again</button>
+            <button type="button" class="primary" id="retryBtn">Play again</button>
           </div>
         </div>
       </div>
     </div>
 
+    <p class="wave-preview" id="wavePreview">Next wave preview</p>
+
     <section class="shop" aria-label="Tower shop">
       <div class="shop-towers" id="towerShop"></div>
       <div class="shop-actions">
         <button type="button" class="wave-btn" id="sendWaveBtn">Send Wave</button>
-        <button type="button" class="ghost" id="sellBtn" disabled>Sell</button>
+        <button type="button" class="ghost" id="targetBtn" disabled>Target: —</button>
         <button type="button" class="ghost" id="upgradeBtn" disabled>Upgrade</button>
-        <span class="hint desktop-only" id="selHint">Select a pad or turret</span>
-        <span class="hint touch-only">Tap pad to build · tap turret to manage</span>
+        <button type="button" class="ghost" id="sellBtn" disabled>Sell</button>
+        <button type="button" class="ghost" id="pauseBtn">Pause</button>
+        <button type="button" class="ghost" id="speedBtn" disabled>Speed ×1</button>
+        <span class="hint desktop-only">1–6 towers · T = target mode · Esc = pause · hold pad to sell</span>
+        <span class="hint touch-only">Tap pad to build · hold turret to sell</span>
       </div>
     </section>
 
     <section class="panel">
-      <h2>High scores</h2>
-      <ol id="arcade-lb"></ol>
+      <h2>Achievements</h2>
+      <ul id="achievementList" class="achievement-list"></ul>
+    </section>
+
+    <section class="panel lb-grid">
+      <div>
+        <h2>High scores</h2>
+        <ol id="arcade-lb"></ol>
+      </div>
+      <div>
+        <h2>Hard mode</h2>
+        <ol id="arcade-lb-hard"></ol>
+      </div>
     </section>
   </main>
 
   <script src="../arcade-tokens.js"></script>
   <script src="../arcade-scores.js"></script>
   <script src="../arcade-gamepad.js"></script>
+  <script src="./maps.js"></script>
   <script src="./game.js"></script>
   <script src="/sw-register.js"></script>
 </body>

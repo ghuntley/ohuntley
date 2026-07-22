@@ -12,7 +12,7 @@
  *     lobby loads even when no specific page is cached.
  */
 
-const VERSION = "funland-arcade-v15";
+const VERSION = "funland-arcade-v17";
 
 const PRECACHE_URLS = [
   "/",
@@ -33,6 +33,8 @@ const PRECACHE_URLS = [
   "/vendor/fonts/vt323-latin.woff2",
   "/vendor/three/build/three.module.js",
   "/vendor/three/examples/jsm/controls/PointerLockControls.js",
+  "/vendor/three/examples/jsm/loaders/GLTFLoader.js",
+  "/vendor/three/examples/jsm/utils/BufferGeometryUtils.js",
   "/vendor/three/examples/jsm/postprocessing/EffectComposer.js",
   "/vendor/three/examples/jsm/postprocessing/MaskPass.js",
   "/vendor/three/examples/jsm/postprocessing/OutputPass.js",
@@ -89,6 +91,7 @@ const PRECACHE_URLS = [
   "/towers/",
   "/towers/index.html",
   "/towers/game.js",
+  "/towers/maps.js",
   "/towers/style.css",
 ];
 
