@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-touch-compatible="true">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Grid Sentinel — Tower Defense</title>
+  <link rel="stylesheet" href="../vendor/fonts/fonts.css" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <a class="back-link" href="../index.html" title="Back to the arcade">← Arcade</a>
+
+  <main class="shell" id="shell">
+    <header class="topbar">
+      <div class="title-block">
+        <h1>GRID SENTINEL</h1>
+        <p class="subtitle">Bloons-style waves · Defense Grid placement</p>
+      </div>
+      <div class="stats" aria-live="polite">
+        <span class="stat gold"><span class="label">Gold</span> <strong id="goldVal">120</strong></span>
+        <span class="stat lives"><span class="label">Lives</span> <strong id="livesVal">20</strong></span>
+        <span class="stat wave"><span class="label">Wave</span> <strong id="waveVal">0</strong></span>
+        <span class="stat score"><span class="label">Score</span> <strong id="scoreVal">0</strong></span>
+      </div>
+    </header>
+
+    <div class="stage-wrap">
+      <canvas id="game" tabindex="0" role="application" aria-label="Tower defense grid"></canvas>
+      <div class="overlay" id="startOverlay">
+        <div class="overlay-card">
+          <h2>Defend the Core</h2>
+          <p>Enemies follow the glowing lane. Place turrets on marked pads, then send waves.</p>
+          <p class="desktop-only">Pick a tower below · click a pad to build · <kbd>Space</kbd> to send wave</p>
+          <p class="touch-only">Pick a tower · tap a pad · tap Send Wave</p>
+          <button type="button" class="primary" id="startBtn">Start mission</button>
+        </div>
+      </div>
+      <div class="overlay" id="gameOverOverlay" hidden>
+        <div class="overlay-card">
+          <h2 id="gameOverTitle">Core Breached</h2>
+          <p>Final score: <strong id="finalScore">0</strong></p>
+          <p>Wave reached: <strong id="finalWave">0</strong></p>
+          <div class="overlay-actions">
+            <button type="button" class="primary" id="retryBtn">Try again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="shop" aria-label="Tower shop">
+      <div class="shop-towers" id="towerShop"></div>
+      <div class="shop-actions">
+        <button type="button" class="wave-btn" id="sendWaveBtn">Send Wave</button>
+        <button type="button" class="ghost" id="sellBtn" disabled>Sell</button>
+        <button type="button" class="ghost" id="upgradeBtn" disabled>Upgrade</button>
+        <span class="hint desktop-only" id="selHint">Select a pad or turret</span>
+        <span class="hint touch-only">Tap pad to build · tap turret to manage</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>High scores</h2>
+      <ol id="arcade-lb"></ol>
+    </section>
+  </main>
+
+  <script src="../arcade-tokens.js"></script>
+  <script src="../arcade-scores.js"></script>
+  <script src="../arcade-gamepad.js"></script>
+  <script src="./game.js"></script>
+  <script src="/sw-register.js"></script>
+</body>
+</html>

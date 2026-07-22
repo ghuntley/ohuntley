@@ -83,6 +83,13 @@ const DEFAULT_GAMES = [
     marquee: "#7df9ff",
     screen: "#ff6eb4",
   },
+  {
+    slug: "towers",
+    title: "GRID SENTINEL",
+    blurb: "Tower defense · pad placement · 20 waves",
+    marquee: "#b8ff6a",
+    screen: "#7df9ff",
+  },
 ];
 
 function getGames() {

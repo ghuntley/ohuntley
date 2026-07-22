@@ -45,7 +45,7 @@ Each game folder has a **slug** (folder name). All playable cabinets must be reg
 | `arcade-3d.js` → `DEFAULT_GAMES` | Fallback list (keep identical to above) |
 | `service-worker.js` → `PRECACHE_URLS` | Offline assets (+ bump `VERSION`) |
 
-Current slugs: `maze`, `meerkat`, `meerkat-tycoon`, `gorillas`, `nibbles`, `grapple`, `parkour`, `peggle`, `shooter`, `clicker`, `drone`.
+Current slugs: `maze`, `meerkat`, `meerkat-tycoon`, `gorillas`, `nibbles`, `grapple`, `parkour`, `peggle`, `shooter`, `clicker`, `drone`, `towers`.
 
 **Room layout:** max **5 games per 3D lobby room**; additional games spawn new rooms automatically. See `.cursor/skills/arcade-room-layout/SKILL.md`.
 

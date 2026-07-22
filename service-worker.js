@@ -12,7 +12,7 @@
  *     lobby loads even when no specific page is cached.
  */
 
-const VERSION = "funland-arcade-v14";
+const VERSION = "funland-arcade-v15";
 
 const PRECACHE_URLS = [
   "/",
@@ -86,6 +86,10 @@ const PRECACHE_URLS = [
   "/drone/",
   "/drone/index.html",
   "/drone/drone-game.js",
+  "/towers/",
+  "/towers/index.html",
+  "/towers/game.js",
+  "/towers/style.css",
 ];
 
 self.addEventListener("install", (event) => {
